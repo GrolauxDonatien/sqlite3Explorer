@@ -1,0 +1,95 @@
+body {
+    display:flex;
+    flex-direction: column;
+    background-color:white;
+}
+
+body > div {
+    width:100%;
+}
+
+#results {
+    flex-grow: 1;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow-y:hidden;
+}
+
+.error {
+    color: crimson;
+}
+
+#results div {
+    font-family: monospace;
+    font-size: medium;
+}
+
+#bottom {
+    display: flex;
+    flex-direction: row;
+    font-family: monospace;
+}
+
+#bottom label {
+    color:blue;
+    font-weight: bold;
+}
+
+#bottom input {
+    font-family: monospace;
+    font-size: medium;
+}
+
+#sql {
+    flex-grow:1;
+    border:none;
+    outline:none;
+}
+
+#sql:before {
+    content: "> ";
+    margin-right: 6px;
+}
+
+#results table {
+    width: fit-content;
+}
+
+
+#results table {
+    margin-top:4px;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  
+  #results table td, #results table th {
+    border:solid 1px lightgray;
+    padding-left:4px;
+    padding-right:4px;
+  }
+  
+  #results table>thead>tr>th:first-child {
+    min-width: 50px;
+  }
+  
+  #results table .typeinfo {
+    font-weight: lighter;
+    font-size: 10px;
+    padding-top: 2px;
+    text-transform: lowercase;
+  }
+  
+  #results table .typeinfo {
+    text-align: left;
+  }
+  
+  #results table .error {
+    text-align: left;
+    color:red;
+  }
+  
+  #results table .number {
+    text-align: right;
+  }
