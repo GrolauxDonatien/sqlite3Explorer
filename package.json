@@ -1,6 +1,6 @@
 {
     "name": "sqlite3_explorer",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "description": "SQLite3 Explorer",
     "main": "editor-app/backend/main.js",
     "author": "Donatien Grolaux",
