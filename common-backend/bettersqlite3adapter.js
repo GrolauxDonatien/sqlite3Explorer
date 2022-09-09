@@ -25,7 +25,7 @@ function toJSType(type) {
         case "native character":
         case "nchar":
         case "varchar":
-        case "varying character":
+        case "character varying":
             return "string";
         case "boolean":
         case "bit":
@@ -43,7 +43,7 @@ const types = {
     "integer": { 0: ["int", "integer", "tinyint", "smallint", "mediumint", "bigint", "unsigned bit int", "int2", "int8"] },
     "text": {
         0: ["text", "clob"],
-        1: ["character", "varchar", "varying character", "nchar", "native character", "nvarchar"]
+        1: ["character", "varchar", "character varying", "nchar", "native character", "nvarchar"]
     },
     "blob": { 0: ["blob"] },
     "real": { 0: ["real", "double", "double precision", "float"] },

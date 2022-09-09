@@ -11,7 +11,7 @@ const fspath = require('path');
 const { exception } = require('console');
 const { open } = require('inspector');
 const LIMIT = 1000;
-const VERSION = "1.0.10";
+const VERSION = "1.0.11";
 
 let db = null;
 let win;
