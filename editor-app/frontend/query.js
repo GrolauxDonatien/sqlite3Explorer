@@ -11,10 +11,10 @@ let overlay;
 
 $('#explore').css('display', 'none');
 
-let conf={}, model, schema;
+let conf = {}, model, schema;
 
 function display(results) {
-    
+
     if (overlay !== null) {
         overlay.remove();
         overlay = null;
@@ -234,21 +234,21 @@ function execute() {
         sql = $('#tab-free textarea').val();
     }
     ipcAjax({
-        adapter:"sqlite3",
-        action:"query",
-        query:sql,
-        stat:conf.stat,
-        file:conf.file
-    }, (response)=>{
+        adapter: "sqlite3",
+        action: "query",
+        query: sql,
+        stat: conf.stat,
+        file: conf.file
+    }, (response) => {
         if ("schema" in response) {
             // the schema was updated; update the UI correspondingly
             $('#tab-schema').empty();
             $('#tab-builder').empty();
             model = queryUI.createQuery();
-            for(let k in response.schema) {
-                if (k in schema) response.schema[k].coords___=schema[k].coords___;
+            for (let k in response.schema) {
+                if (k in schema) response.schema[k].coords___ = schema[k].coords___;
             }
-            schema=response.schema;
+            schema = response.schema;
             conf.builder.destroy();
             conf.builder = queryUI.dbQueryUI({
                 schemaEl: $('#tab-schema'),
@@ -262,7 +262,7 @@ function execute() {
                     }
                 }
             });
-            conf.stat=response.stat;
+            conf.stat = response.stat;
             if ($('#tab-free').css('display') == "none") {
                 setModel(sql);
             }
@@ -270,32 +270,29 @@ function execute() {
         if ("error" in response) {
             if (overlay != null) {
                 overlay.remove();
-                overlay=null;
+                overlay = null;
             }
-            error(response.error + "<br><br>in<br><br>" + response.query);    
+            error(response.error + "<br><br>in<br><br>" + response.query);
         } else {
             display(response.results);
-            $('#query').text(response.query);    
+            $('#query').text(response.query);
         }
-    }, (err)=>{
+    }, (err) => {
         if (overlay != null) {
             overlay.remove();
-            overlay=null;
+            overlay = null;
         }
-        error(err + "<br><br>in<br><br>" + sql);    
+        error(err + "<br><br>in<br><br>" + sql);
     });
 }
 
 function clear() {
-    if ($('#tab-free').css('display') == "none") {
-        for (let k in model) {
-            delete model[k];
-        }
-        $.extend(model, queryUI.createQuery());
-        conf.builder.refresh();
-    } else {
-        $('#tab-free textarea').val("");
+    for (let k in model) {
+        delete model[k];
     }
+    $.extend(model, queryUI.createQuery());
+    conf.builder.refresh();
+    $('#tab-free textarea').val("");
     $("#tab-results").empty();
     $('#toptabs').tabs('option', 'active', 0);
     $('.toast').remove();
@@ -324,11 +321,11 @@ $("#bottom").on("tabsactivate", function (event, ui) {
     }
 });
 
-let str=location.search.substring(1).split('&');
-for(let i=0; i<str.length; i++) {
-    let idx=str[i].indexOf("=");
-    if (idx!=-1) {
-        conf[str[i].substring(0,idx)]=decodeURIComponent(str[i].substring(idx+1));
+let str = location.search.substring(1).split('&');
+for (let i = 0; i < str.length; i++) {
+    let idx = str[i].indexOf("=");
+    if (idx != -1) {
+        conf[str[i].substring(0, idx)] = decodeURIComponent(str[i].substring(idx + 1));
     }
 }
 
@@ -336,8 +333,8 @@ $("#toptabs").tabs();
 $("#bottomtabs").tabs();
 
 ipcAjax({
-    action:"getSchema",conf:{adapter:"sqlite3", file:conf.file}
-}, (response)=>{
+    action: "getSchema", conf: { adapter: "sqlite3", file: conf.file }
+}, (response) => {
     $('#explore').css('display', 'flex');
     $('#loading').css('display', 'none');
     model = queryUI.createQuery();
@@ -354,7 +351,7 @@ ipcAjax({
             }
         }
     });
-    conf.stat=response.stat;
+    conf.stat = response.stat;
     $('#run').off('click');
     $("#run").click(execute);
     $('#clear').off('click');
