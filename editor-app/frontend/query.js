@@ -22,7 +22,7 @@ function display(results) {
 
     let table = $('<table>');
     $('#tab-results').empty();
-    $('#toptabs').tabs('option', 'active', 1);
+    $('#toptabs').tabs('option', 'active', 2);
     $('#tab-results').append(table);
     let thead = $('<thead>');
     table.append(thead);
@@ -270,6 +270,10 @@ function execute() {
                     if (syncModelToText) {
                         $('#tab-free textarea').val(queryUI.stringify(m, "\n"));
                     }
+                    if (outTab == "tab-qvi") {
+                        qvi.display(queryUI.stringify(m, "\n"));
+                        qvi.resize();
+                    }        
                 }
             });
             conf.stat = response.stat;
