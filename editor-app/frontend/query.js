@@ -297,15 +297,12 @@ function execute() {
 }
 
 function clear() {
-    if ($('#tab-free').css('display') == "none") {
-        for (let k in model) {
-            delete model[k];
-        }
-        $.extend(model, queryUI.createQuery());
-        conf.builder.refresh();
-    } else {
-        $('#tab-free textarea').val("");
+    for (let k in model) {
+        delete model[k];
     }
+    $.extend(model, queryUI.createQuery());
+    conf.builder.refresh();
+    $('#tab-free textarea').val("");
     $("#tab-results").empty();
     $('#toptabs').tabs('option', 'active', 0);
     $('.toast').remove();
@@ -353,7 +350,6 @@ $('#top').on("tabsactivate", function (event, ui) {
             qvi.resize();
         }
     }
-    //    setInTab($('#bottomtabs').find('.ui-state-active').children().eq(0).attr('href').substring(1));
 });
 
 let str = location.search.substring(1).split('&');
