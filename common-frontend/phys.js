@@ -77,17 +77,18 @@
                 })
 
                 for (let i = 0; i < model.length; i++) {
-                    if ("draw" in model[i]) {
-                        if (!("super" in model[i])) {
-                            if (model[i].type in renderers) {
-                                model[i].super = { draw: (layers, model) => { renderers[model[i].type](model[i], layers, model); }, physCanvas };
+                    let m=model[i];
+                    if ("draw" in m) {
+                        if (!("super" in m)) {
+                            if (m.type in renderers) {
+                                m.super = { draw: (layers, model) => { renderers[m.type](m, layers, model); }, physCanvas };
                             } else {
-                                model[i].super = { draw: function () { }, physCanvas };
+                                m.super = { draw: function () { }, physCanvas };
                             }
                         }
-                        model[i].draw.call(model[i], layers, model); // each item can also have a draw function to show a selection for example
-                    } else if (model[i].type in renderers) {
-                        renderers[model[i].type](model[i], layers, model);
+                        m.draw.call(m, layers, model); // each item can also have a draw function to show a selection for example
+                    } else if (m.type in renderers) {
+                        renderers[m.type](m, layers, model);
                     }
                 }
 

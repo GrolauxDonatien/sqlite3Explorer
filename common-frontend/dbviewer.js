@@ -642,7 +642,8 @@
             let counts = {};
             for (let i = phys.model.length - 1; i >= 0; i--) { // save current links, removing them from the model
                 if (phys.model[i].type == "link") {
-                    links[hash(phys.model[i])] = phys.model.splice(i, 1)[0];
+                    let link = phys.model.splice(i, 1)[0];
+                    links[hash(link)] = link;
                 }
             }
             for (let k in model) {
