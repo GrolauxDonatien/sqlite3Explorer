@@ -100,12 +100,12 @@
                 ret.preformat = preformat;
                 for (let a in identifiers) {
                     if (a === "") {
-                        let ok=true;
-                        for(let c in identifiers[a]) {
-                            if (!identifiers[a][c].startsWith("___replacer")) ok=false;
+                        let ok = true;
+                        for (let c in identifiers[a]) {
+                            if (!identifiers[a][c].startsWith("___replacer")) ok = false;
                         }
                         if (ok) continue;
-                    } 
+                    }
                     if (a in acceptable) {
                         for (let c in identifiers[a]) {
                             if (!(c in acceptable[a])) {
@@ -1083,50 +1083,53 @@
                             validTables[name.alias] = schema[name.table]
                         }
                     }
-                    let onInfo = processCondition(model.from[i][key], validTables);
-                    from.append(" ON ");
-                    let o = {
-                        class: "condition",
-                        parent: from, value: model.from[i], key,
-                        hasError: model.from[i][key] != "" && ("error" in onInfo),
-                        errorTooltip: onInfo.error,
-                        editable: true,
-                        deletable: true,
-                        autocomplete: function () {
-                            let columns = {};
-                            for (let t in validTables) {
-                                for (let c in validTables[t]) {
-                                    if (c == "coords___") continue;
-                                    columns[t + "." + c] = "";
+                    let onInfo;
+                    if (model.from[i][key] != null) {
+                        onInfo = processCondition(model.from[i][key], validTables);
+                        from.append(" ON ");
+                        let o = {
+                            class: "condition",
+                            parent: from, value: model.from[i], key,
+                            hasError: model.from[i][key] != "" && ("error" in onInfo),
+                            errorTooltip: onInfo.error,
+                            editable: true,
+                            deletable: true,
+                            autocomplete: function () {
+                                let columns = {};
+                                for (let t in validTables) {
+                                    for (let c in validTables[t]) {
+                                        if (c == "coords___") continue;
+                                        columns[t + "." + c] = "";
+                                    }
                                 }
+                                return [columns];
+                            },
+                            onChange() {
+                                assertAliases();
+                                renderFrom();
+                                renderGroupBy();
+                                renderSelect();
+                                renderOrderBy();
+                                renderHaving();
+                                schemaUI.redraw();
+                            },
+                            onDelete() {
+                                model.from[i] = {};
+                                assertAliases();
+                                renderFrom();
+                                renderGroupBy();
+                                renderSelect();
+                                renderOrderBy();
+                                renderHaving();
+                                schemaUI.redraw();
                             }
-                            return [columns];
-                        },
-                        onChange() {
-                            assertAliases();
-                            renderFrom();
-                            renderGroupBy();
-                            renderSelect();
-                            renderOrderBy();
-                            renderHaving();
-                            schemaUI.redraw();
-                        },
-                        onDelete() {
-                            model.from[i] = {};
-                            assertAliases();
-                            renderFrom();
-                            renderGroupBy();
-                            renderSelect();
-                            renderOrderBy();
-                            renderHaving();
-                            schemaUI.redraw();
                         }
+                        if ("subqueries" in onInfo && Object.keys(onInfo.subqueries).length != 0) { // with subquery
+                            o.subqueries = onInfo.subqueries;
+                            o.preformat = onInfo.preformat;
+                        }
+                        from.olds.push(append(o));
                     }
-                    if ("subqueries" in onInfo && Object.keys(onInfo.subqueries).length != 0) { // with subquery
-                        o.subqueries = onInfo.subqueries;
-                        o.preformat = onInfo.preformat;
-                    }
-                    from.olds.push(append(o));
                 }
             }
             restoreFocus(from);
@@ -1592,7 +1595,7 @@
         return span.text();
     }
 
-    function dbQueryDialog({ schema, available, model: inmodel, sql, onchange, db=null,title="Edit Query..." }) {
+    function dbQueryDialog({ schema, available, model: inmodel, sql, onchange, db = null, title = "Edit Query..." }) {
 
         let availables = [];
         for (let i = 0; i < available.length; i++) {
@@ -1609,7 +1612,7 @@
             // preprocess cond with availables
             for (let i = 0; i < availables.length; i++) {
                 let idx;
-                while ((idx = cond.indexOf(availables[i]) )!= -1) {
+                while ((idx = cond.indexOf(availables[i])) != -1) {
                     cond = cond.substring(0, idx) + `___replacer${i}___` + cond.substring(idx + availables[i].length);
                 }
             }
@@ -1639,7 +1642,7 @@
             } else {
                 try {
                     inmodel = window.parsers.disAmbiguateSelect(window.parsers.parse(fixOutsideRefCondition(sql)), schema);
-                    inmodel.where=unfixOutsideRefCondition(inmodel.where);
+                    inmodel.where = unfixOutsideRefCondition(inmodel.where);
                     sql = undefined; // no need to remember sql, it is now in the model
                 } catch (e) {
                     inmodel = createQuery();
@@ -1672,7 +1675,7 @@
         error.css('display', 'none');
         diag.append(panel);
         panel.tabs();
-        if (db==null) {
+        if (db == null) {
             diag.append(bottom);
         } else {
             function display(results) {
@@ -1729,20 +1732,20 @@
                     tbody.append(tr);
                 }
                 jsonresults.empty();
-                jsonresults.append($('<pre>').text(JSON.stringify(results.rows,null,4)));
+                jsonresults.append($('<pre>').text(JSON.stringify(results.rows, null, 4)));
             }
-            
-            let bottomul=$('<ul>');
+
+            let bottomul = $('<ul>');
             bottomul.append($('<li><a href="#tab-diag-schema">Schema</a></li>'));
             bottomul.append($('<li><a href="#tab-diag-results">Results</a></li>'));
             bottomul.append($('<li><a href="#tab-diag-json-results">JSON Results</a></li>'));
-            let bottomcontainer=$('<div>');
-            let results= $('<div id="tab-diag-results">');
-            let jsonresults= $('<div id="tab-diag-json-results">');
+            let bottomcontainer = $('<div>');
+            let results = $('<div id="tab-diag-results">');
+            let jsonresults = $('<div id="tab-diag-json-results">');
             diag.append(bottomcontainer);
             bottomcontainer.append(bottomul);
-            let run=$('<button class="runquery">Run</button>');
-            run.on('click',()=>{
+            let run = $('<button class="runquery">Run</button>');
+            run.on('click', () => {
                 let sql;
                 if (syncModelToText) {
                     try {
@@ -1753,7 +1756,7 @@
                 } else {
                     sql = stringify(model, "\n");
                 }
-                db(sql,display);
+                db(sql, display);
             })
             bottomcontainer.append(run);
             bottomcontainer.append(bottom);
@@ -1770,6 +1773,7 @@
                 }
                 syncTimer = setTimeout(function () {
                     syncTimer = null;
+                    debugger;
                     error.css('display', 'none');
                     if (syncModelToText) {
                         try {

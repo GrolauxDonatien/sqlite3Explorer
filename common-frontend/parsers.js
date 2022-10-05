@@ -308,26 +308,26 @@ let parsers = (function () {
     }
 
     function parseWhere(where, subqueries) {
-        for(let k in subqueries) {
-            let idx=where.indexOf(k);
-            if (idx!=-1) {
-                where=where.substring(0,idx)+"SELECT * FROM "+k+where.substring(idx+k.length);
+        for (let k in subqueries) {
+            let idx = where.indexOf(k);
+            if (idx != -1) {
+                where = where.substring(0, idx) + "SELECT * FROM " + k + where.substring(idx + k.length);
             }
         }
         let all = parsers.sqlParser.parse("SELECT * FROM fake WHERE " + where);
         function loop(r) {
-            if (typeof r=="string" || typeof r=="number") return;
-            if (r.type=="SubQuery" && r.value.selectItems.value.length==1 
-            && ((r.value.selectItems.value[0].type=="SelectExpr" && r.value.selectItems.value[0].value.length==1 && r.value.selectItems.value[0].value[0].type=="Identifier" && r.value.selectItems.value[0].value[0].name=="*")
-            || (r.value.selectItems.value[0].type=="Identifier" && r.value.selectItems.value[0].value=="*")
-            ) && r.value.from.type=="TableReferences" && r.value.from.value.length==1
-            && r.value.from.value[0].type=="TableReference" && r.value.from.value[0].value.type=="TableFactor" && r.value.from.value[0].value.value.type=="Identifier"
-            && r.value.from.value[0].value.value.value in subqueries) {
-                r.name=r.value.from.value[0].value.value.value;
+            if (typeof r == "string" || typeof r == "number") return;
+            if (r.type == "SubQuery" && r.value.selectItems.value.length == 1
+                && ((r.value.selectItems.value[0].type == "SelectExpr" && r.value.selectItems.value[0].value.length == 1 && r.value.selectItems.value[0].value[0].type == "Identifier" && r.value.selectItems.value[0].value[0].name == "*")
+                    || (r.value.selectItems.value[0].type == "Identifier" && r.value.selectItems.value[0].value == "*")
+                ) && r.value.from.type == "TableReferences" && r.value.from.value.length == 1
+                && r.value.from.value[0].type == "TableReference" && r.value.from.value[0].value.type == "TableFactor" && r.value.from.value[0].value.value.type == "Identifier"
+                && r.value.from.value[0].value.value.value in subqueries) {
+                r.name = r.value.from.value[0].value.value.value;
             } else {
-                if ("value" in r) {loop(r.value)};
-                if ("left" in r) {loop(r.left)};
-                if ("right" in r) {loop(r.right)};
+                if ("value" in r) { loop(r.value) };
+                if ("left" in r) { loop(r.left) };
+                if ("right" in r) { loop(r.right) };
             }
         }
         if (subqueries) loop(all.value.where);
@@ -338,7 +338,7 @@ let parsers = (function () {
     function processCondition(cond) {
         let subqueryid = 0;
         let subqueries = {};
-        let existsqueries={};
+        let existsqueries = {};
         let identifiers = {};
         function process(input, key) {
             let tree = input[key];
@@ -413,7 +413,7 @@ let parsers = (function () {
                     break;
                 case "SubQuery":
                     process(tree, "value");
-                    existsqueries[tree.value.value]=subqueries[tree.value.value];
+                    existsqueries[tree.value.value] = subqueries[tree.value.value];
                     tree.type = tree.value.type;
                     tree.value = "(" + tree.value.value + ")";
                     if (tree.hasNot == "NOT") {
@@ -504,9 +504,13 @@ let parsers = (function () {
                 case "InnerCrossJoinTable":
                     if (jointype === undefined) jointype = "outer";
                     loop(what.left);
-                    dummy = parsers.sqlParser.parse("SELECT * FROM T WHERE TRUE");
-                    dummy.value.where = what.condition.value;
-                    ret.push({ [jointype]: parsers.sqlParser.stringify(dummy).substring(22) });
+                    if (what.condition != null) {
+                        dummy = parsers.sqlParser.parse("SELECT * FROM T WHERE TRUE");
+                        dummy.value.where = what.condition.value;
+                        ret.push({ [jointype]: parsers.sqlParser.stringify(dummy).substring(22) });
+                    } else {
+                        ret.push({ [jointype]: null });
+                    }
                     loop(what.right);
                     break;
                 default:
@@ -628,9 +632,9 @@ let parsers = (function () {
                     console.info(parsers);
                     return "";
                 }
-                let ret=parser[w.type](w);
-                if (("hasAs" in w) && w.hasAs===true) {
-                    ret+=" AS "+w.alias;
+                let ret = parser[w.type](w);
+                if (("hasAs" in w) && w.hasAs === true) {
+                    ret += " AS " + w.alias;
                 }
                 return ret;
             }
@@ -894,13 +898,13 @@ let parsers = (function () {
         getTableAliasName,
         disAmbiguateSelect,
         setSQLParser(parser) {
-            parsers.sqlParser={
-                stringify:parser.stringify,
+            parsers.sqlParser = {
+                stringify: parser.stringify,
                 parse(query) {
                     // this dance is to fix a problem where the parser does not support setting AS columns properly
-                    let p=window.dbadapter.prepSelect(query);
-                    let ret=parser.parse(p.query);
-                    window.dbadapter.setAlias(ret,p.map);
+                    let p = window.dbadapter.prepSelect(query);
+                    let ret = parser.parse(p.query);
+                    window.dbadapter.setAlias(ret, p.map);
                     return ret;
                 }
             }

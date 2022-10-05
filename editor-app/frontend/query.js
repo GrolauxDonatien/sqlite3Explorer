@@ -11,10 +11,10 @@ let overlay;
 
 $('#explore').css('display', 'none');
 
-let conf={}, model, schema;
+let conf = {}, model, schema;
 
 function display(results) {
-    
+
     if (overlay !== null) {
         overlay.remove();
         overlay = null;
@@ -75,6 +75,7 @@ function display(results) {
 }
 
 let syncModelToText = false;
+let outTab = "schema";
 let syncTimer = null;
 
 function setModel(content) {
@@ -122,9 +123,18 @@ $('#tab-free textarea').on('keyup', function () {
         syncTimer = setTimeout(function () {
             syncTimer = null;
             $('#tab-schema .error').css('display', 'none');
+            $('#tab-qvi .error').css('display', 'none');
             if (syncModelToText) {
-                if (!setContent($('#tab-free textarea').val())) {
-                    $('#tab-schema .error').css('display', 'flex');
+                if (outTab=="tab-qvi") {
+                    if (!qvi.display($('#tab-free textarea').val())) {
+                        $('#tab-schema .error').css('display', 'flex');
+                        $('#tab-qvi .error').css('display', 'flex');
+                    }
+                } else {
+                    if (!setModel($('#tab-free textarea').val())) {
+                        $('#tab-schema .error').css('display', 'flex');
+                        $('#tab-qvi .error').css('display', 'flex');
+                    }    
                 }
             }
         }, SYNCDELAY); // small delay before trying to sync
@@ -234,21 +244,21 @@ function execute() {
         sql = $('#tab-free textarea').val();
     }
     ipcAjax({
-        adapter:"sqlite3",
-        action:"query",
-        query:sql,
-        stat:conf.stat,
-        file:conf.file
-    }, (response)=>{
+        adapter: "sqlite3",
+        action: "query",
+        query: sql,
+        stat: conf.stat,
+        file: conf.file
+    }, (response) => {
         if ("schema" in response) {
             // the schema was updated; update the UI correspondingly
             $('#tab-schema').empty();
             $('#tab-builder').empty();
             model = queryUI.createQuery();
-            for(let k in response.schema) {
-                if (k in schema) response.schema[k].coords___=schema[k].coords___;
+            for (let k in response.schema) {
+                if (k in schema) response.schema[k].coords___ = schema[k].coords___;
             }
-            schema=response.schema;
+            schema = response.schema;
             conf.builder.destroy();
             conf.builder = queryUI.dbQueryUI({
                 schemaEl: $('#tab-schema'),
@@ -262,7 +272,7 @@ function execute() {
                     }
                 }
             });
-            conf.stat=response.stat;
+            conf.stat = response.stat;
             if ($('#tab-free').css('display') == "none") {
                 setModel(sql);
             }
@@ -270,19 +280,19 @@ function execute() {
         if ("error" in response) {
             if (overlay != null) {
                 overlay.remove();
-                overlay=null;
+                overlay = null;
             }
-            error(response.error + "<br><br>in<br><br>" + response.query);    
+            error(response.error + "<br><br>in<br><br>" + response.query);
         } else {
             display(response.results);
-            $('#query').text(response.query);    
+            $('#query').text(response.query);
         }
-    }, (err)=>{
+    }, (err) => {
         if (overlay != null) {
             overlay.remove();
-            overlay=null;
+            overlay = null;
         }
-        error(err + "<br><br>in<br><br>" + sql);    
+        error(err + "<br><br>in<br><br>" + sql);
     });
 }
 
@@ -302,42 +312,124 @@ function clear() {
     $('#query').text("");
 }
 
-$("#bottom").on("tabsactivate", function (event, ui) {
-    switch (ui.newTab.children().eq(0).attr('href')) {
-        case "#tab-free":
+function setInTab(tab) {
+    switch (tab) {
+        case "tab-free":
             syncModelToText = true;
             $('#tab-schema .error').css('display', 'none');
+            $('#tab-qvi .error').css('display', 'none');
             $('#tab-free textarea').val(queryUI.stringify(model, "\n"));
             break;
-        case "#tab-builder":
+        case "tab-builder":
             syncModelToText = false;
             $('#tab-schema .error').css('display', 'none');
+            $('#tab-qvi .error').css('display', 'none');
             let content = $('#tab-free textarea').val();
             try {
                 let newModel = window.parsers.disAmbiguateSelect(window.parsers.parse(content), schema);
                 $.extend(model, newModel);
                 conf.builder.refresh();
             } catch (e) {
+                console.log(e);
+                debugger;
                 // ignore
             }
             break;
     }
+}
+
+$("#bottom").on("tabsactivate", function (event, ui) {
+    setInTab(ui.newTab.children().eq(0).attr('href').substring(1));
 });
 
-let str=location.search.substring(1).split('&');
-for(let i=0; i<str.length; i++) {
-    let idx=str[i].indexOf("=");
-    if (idx!=-1) {
-        conf[str[i].substring(0,idx)]=decodeURIComponent(str[i].substring(idx+1));
+$('#top').on("tabsactivate", function (event, ui) {
+    outTab = ui.newTab.children().eq(0).attr('href').substring(1);
+    if (outTab=="tab-qvi") {
+        if (syncModelToText) {
+            qvi.display($('#tab-free textarea').val());
+            qvi.resize();
+        } else {
+            qvi.display(queryUI.stringify(model, "\n"))
+            qvi.resize();
+        }
+    }
+    //    setInTab($('#bottomtabs').find('.ui-state-active').children().eq(0).attr('href').substring(1));
+});
+
+let str = location.search.substring(1).split('&');
+for (let i = 0; i < str.length; i++) {
+    let idx = str[i].indexOf("=");
+    if (idx != -1) {
+        conf[str[i].substring(0, idx)] = decodeURIComponent(str[i].substring(idx + 1));
     }
 }
 
 $("#toptabs").tabs();
 $("#bottomtabs").tabs();
 
+let qvi = (function initQVI(root) {
+    let canvas = document.createElement('CANVAS');
+    $('#tab-qvi')[0].appendChild(canvas);
+
+    physCanvas = createPhysCanvas(canvas, { drawJunctions: true });
+    physCanvas.addEventListener('click', (event) => {
+        if (event.modelTarget !== undefined && event.modelTarget.type == "rect" && ("toggle" in event.modelTarget)) {
+            event.modelTarget.toggle(event);
+        }
+    });
+
+    function resizeCanvas() {
+        let bb = physCanvas.bbox();
+        let w=Math.max(bb.width + 100, physCanvas.canvas.parentElement.clientWidth );
+        let h=Math.max(bb.height + 100, physCanvas.canvas.parentElement.clientHeight );
+        physCanvas.canvas.setAttribute("width", w);
+        physCanvas.canvas.setAttribute("height", h);
+        let ctx=physCanvas.canvas.getContext("2d");
+        ctx.width = w;
+        ctx.height = h;
+        physCanvas.repaint();
+    }
+
+    $(window).on('resize', resizeCanvas);
+    let oldsql="";
+
+    return {
+        display(sql) {
+            if (sql.trim()==oldsql) return $('#tab-qvi .error').css('display')=='none';
+            oldsql=sql.trim();
+            let parsed;
+            try {
+                parsed = window.sqlParser.parse(sql);
+                $('#tab-qvi .error').css('display', 'none');
+            } catch (e) {
+                $('#tab-qvi .error').css('display', 'flex');
+                return false;
+            }
+            let queryModelAll = queryASTToQueryModel(parsed);
+            let queryModel = queryModelAll.results;
+            queryModel = notExistsToForAll(queryModel);
+            let physModel=queryModelToPhysModel(queryModel, physCanvas.config);
+            physCanvas.model.splice(0,physCanvas.model.length);
+            physCanvas.model.push.apply(physCanvas.model, physModel);
+
+            physCanvas.addEventListener("afterPaint", physCanvas.bringIntoView);
+            setTimeout(() => {
+                let f = function () {
+                    physCanvas.removeEventListener("afterPaint", physCanvas.bringIntoView);
+                    physCanvas.removeEventListener("stopPaint", f);
+                    physCanvas.repaint();
+                }
+                physCanvas.addEventListener("stopPaint", f);
+            }, 500);
+            return true;
+        }, 
+        resize:resizeCanvas
+    }
+})();
+
 ipcAjax({
-    action:"getSchema",conf:{adapter:"sqlite3", file:conf.file}
-}, (response)=>{
+    action: "getSchema", conf: { adapter: "sqlite3", file: conf.file }
+}, (response) => {
     $('#explore').css('display', 'flex');
     $('#loading').css('display', 'none');
     model = queryUI.createQuery();
@@ -349,12 +441,17 @@ ipcAjax({
         available: [],
         model: model,
         onchange: function (e, m) {
+            conf.builder.refresh();
             if (syncModelToText) {
                 $('#tab-free textarea').val(queryUI.stringify(m, "\n"));
             }
+            if (outTab == "tab-qvi") {
+                qvi.display(queryUI.stringify(m, "\n"));
+                qvi.resize();
+            }
         }
     });
-    conf.stat=response.stat;
+    conf.stat = response.stat;
     $('#run').off('click');
     $("#run").click(execute);
     $('#clear').off('click');

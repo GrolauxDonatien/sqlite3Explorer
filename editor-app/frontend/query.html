@@ -39,9 +39,13 @@
                     <pre id="query"></pre>
                     <ul>
                         <li><a href="#tab-schema">Schema</a></li>
+                        <li><a href="#tab-qvi">Visual Query</a></li>
                         <li><a href="#tab-results">Results</a></li>
                     </ul>
                     <div id="tab-schema">
+                        <div class="error">Cannot process this SQL statement at this time</div>
+                    </div>
+                    <div id="tab-qvi">
                         <div class="error">Cannot process this SQL statement at this time</div>
                     </div>
                     <div id="tab-results">
@@ -62,6 +66,10 @@
         <script type="text/javascript" src="../../common-frontend/parsers.js"></script>
         <script type="text/javascript" src="../../common-frontend/dbviewer.js"></script>
         <script type="text/javascript" src="../../common-frontend/dbaction.js"></script>
+        <script type="text/javascript" src="../../common-frontend/utils.js"></script>
+        <script type="text/javascript" src="../../common-frontend/phys.js"></script>
+        <script type="text/javascript" src="../../common-frontend/sqltransformer.js"></script>
+        <script type="text/javascript" src="../../common-frontend/sqldraw.js"></script>
         <script type="text/javascript" src="../../common-frontend/dbquery.js"></script>
         <script type="text/javascript" src="dbadapter.js"></script>
         <script type="text/javascript" src="editorIOElectron.js"></script>

@@ -10,8 +10,7 @@
     const GREEN = 'green';
 
     function getPos(event) {
-        let rect = event.currentTarget.getBoundingClientRect()
-        return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+        return { x: event.canvasX, y: event.canvasY };
     }
 
     function isInside(c, px, py) {
@@ -47,11 +46,11 @@
         //    el.append($('<pre>').text(JSON.stringify(model,null,4)));
         if (events === undefined) events = {};
         let zoom = 1.00;
-        let redrawing = true;
-        let eventLock = false;
         let canvas = $('<canvas class="navdataflow" style="font:serif 20px" width="1400" height="1000">');
         canvas.css("zoom", (zoom * 100) + "%");
         root.append(canvas);
+        let phys = createPhysCanvas(canvas[0], { font: '14px Arial' });
+
         const ctx = canvas[0].getContext("2d");
         ctx.font = "18px Arial";
         let textHeight;
@@ -74,138 +73,34 @@
             return null;
         }
 
-        let old = null;
-        let moveobject = null;
-
-        const NONE = {
-            down(event, pos) {
-                if (event.button == 0 && event.shiftKey == true) {
-                    event.button = 2;
-                    event.shiftKey = false;
-                    event.which = 3; // shift+left click = right click
-                }
-                let tgt = getTarget(pos);
-                if (tgt == null) {
-                    selectionModel.clear(event);
-                } else {
-                    moveobject = tgt;
-                    old = pos;
-                    state = MAYBEMOVE;
-                }
-                redraw();
+        function rightclick(event, pos) {
+            if (event.button == 0 && event.shiftKey == true) {
+                event.button = 2;
+                event.shiftKey = false;
+                event.which = 3; // shift+left click = right click
             }
+            let tgt = $.extend({}, getTarget(pos));
+            delete tgt.coords;
+            selectionModel.select(tgt, event, pos);
         }
 
-        const MAYBEMOVE = {
-            drag(event, pos) {
-                if (Math.abs(pos.x - old.x) > 2 || Math.abs(pos.y - old.y) > 2) {
-                    if (radios) {
-                        let tgt = getTarget(pos);
-                        if (tgt != null && old.x > tgt.coords.x && old.x < tgt.coords.x + 12) {
-                            state = DRAG;
-                            state.drag(event, pos);
-                            return;
-                        }
-                    }
-                    state = MOVE;
-                    state.drag(event, pos);
-                }
-            },
-            up(event, pos) {
-                if (event.button == 0 && event.shiftKey == true) {
-                    event.button = 2;
-                    event.shiftKey = false;
-                    event.which = 3; // shift+left click = right click
-                }
-                let tgt = $.extend({}, getTarget(pos));
-                delete tgt.coords;
-                selectionModel.select(tgt, event, pos);
-                redraw();
-                state = NONE;
-            },
-            move(event, pos) {
-                state = NONE;
-            }
-        }
-
-        const MOVE = {
-            drag(event, pos) {
-                // adjust coord of selectedTable
-                if (moveobject.alias === undefined) {
-                    model[moveobject.table].coords___.x += pos.x - old.x;
-                    model[moveobject.table].coords___.y += pos.y - old.y;
-                } else {
-                    aliases[moveobject.alias].coords___.x += pos.x - old.x;
-                    aliases[moveobject.alias].coords___.y += pos.y - old.y;
-                }
-                old = pos;
-                redraw();
-            },
-            up(event, pos) {
-                state = NONE;
-            }
-        }
-
-        const DRAG = {
-            drag(event, pos) {
-                let tgt = $.extend({}, getTarget(pos));
-                dragTarget = tgt;
-                dragSrc = moveobject;
-                redraw();
-                ctx.beginPath();
-                let c = model[moveobject.table].coords___.columns[moveobject.column];
-                renderDuck(c.x - 3, c.y + textHeight / 2, pos.x, pos.y, true);
-                ctx.stroke();
-            },
-            up(event, pos) {
-                let tgt = $.extend({}, getTarget(pos));
-                delete tgt.coords;
-                delete moveobject.coords;
-                selectionModel.fk(moveobject, tgt, event, pos);
-                moveobject = null;
-                dragTarget = {};
-                dragSrc = {};
-                redraw();
-                state = NONE;
-            }
-        }
-
-        let state = NONE;
-
-        canvas.on("mousemove", function (event) {
-            if (eventLock) return;
+        phys.addEventListener("click", function (event) {
             let pos = getPos(event);
-            if ("mousemove" in events) { if (events.mousemove(event, pos) === false) return; };
-            if (state == null) return;
-            if (event.buttons == 0) { // no buttons down
-                if ("move" in state) {
-                    state.move(event, pos);
-                }
-            } else {
-                if ("drag" in state) {
-                    state.drag(event, pos);
-                }
+            rightclick(event, pos);
+        });
+
+        phys.addEventListener("mouseup", function (event) {
+            let pos = getPos(event);
+            let tgt = getTarget(pos);
+            if (tgt == null) {
+                selectionModel.clear(event);
+            } else if (event.which != 1) {
+                rightclick(event, pos);
             }
         });
 
-        canvas.on("mousedown", function (event) {
-            if (eventLock) return;
-            let pos = getPos(event);
-            if ("mousedown" in events) { if (events.mousedown(event, pos) === false) return; };
-            if (state == null) return;
-            if ("down" in state) {
-                state.down(event, pos);
-            }
-        });
-
-        canvas.on("mouseup", function (event) {
-            if (eventLock) return;
-            let pos = getPos(event);
-            if ("mouseup" in events) { if (events.mouseup(event, pos) === false) return; };
-            if (state == null) return;
-            if ("up" in state) {
-                state.up(event, pos);
-            }
+        phys.addEventListener('beforePaint', function (event) {
+            hotspots = [];
         });
 
         function bbox(orig) {
@@ -254,6 +149,7 @@
         function measureAlias(alias) {
             let w = Math.min(ctx.measureText(aliases[alias].alias).width, 150);
             let m = $.extend({}, model[aliases[alias].table].coords___);
+            m.columns = $.extend({}, m.columns); // reset columns reference, otherwise messes up coords for original table
             m.width = Math.max(w + 10 + iconWidth * 2, m.width);
             return m;
         }
@@ -299,202 +195,6 @@
             mostConstraineds.sort(function (a, b) {
                 return counts[b].length - counts[a].length;
             });
-
-            function recenter() {
-                let shift = 0;
-                for (let k in model) {
-                    let c = model[k].coords___;
-                    if (c === undefined) continue;
-                    if (c.x < 0) shift = Math.max(shift, -c.x);
-                }
-                if (shift > 0) {
-                    shift += 10;
-                    for (let k in model) {
-                        let c = model[k].coords___;
-                        if (c === undefined) continue;
-                        c.x += shift;
-                    }
-                }
-                shift = 0;
-                for (let k in model) {
-                    let c = model[k].coords___;
-                    if (c === undefined) continue;
-                    if (c.y < 0) shift = Math.max(shift, -c.y);
-                }
-                if (shift > 0) {
-                    shift += 10;
-                    for (let k in model) {
-                        let c = model[k].coords___;
-                        if (c === undefined) continue;
-                        c.y += shift;
-                    }
-                }
-            }
-
-            function hasOverlap(c1, c2) {
-                if (c1.x + c1.width <= c2.x) return false;
-                if (c2.x + c2.width <= c1.x) return false;
-                if (c1.y + c1.height <= c2.y) return false;
-                if (c2.y + c2.height <= c1.y) return false;
-                return true;
-            }
-
-            function avoidOverlapX(coords, shiftRight) {
-                function loop(attempt) {
-                    if (attempt > 10) return;
-                    for (let k in model) {
-                        let c = model[k].coords___;
-                        if (c === undefined) continue;
-                        if (hasOverlap(coords, c)) {
-                            if (shiftRight) {
-                                coords.x = Math.max(coords.x + TABLEPAD * 2, c.x + c.width + TABLEPAD * 2);
-                            } else {
-                                coords.x = Math.min(coords.x - TABLEPAD * 2, c.x - coords.width - TABLEPAD * 2);
-                            }
-                            loop(attempt + 1);
-                        }
-                    }
-                }
-                loop(0);
-            }
-
-            function avoidOverlapY(coords, shiftDown) {
-                function loop(attempt) {
-                    if (attempt > 10) return;
-                    for (let k in model) {
-                        let c = model[k].coords___;
-                        if (c === undefined) continue;
-                        if (hasOverlap(coords, c)) {
-                            if (shiftDown) {
-                                coords.y = Math.max(coords.y + TABLEPAD, c.y + c.height + TABLEPAD);
-                            } else {
-                                coords.y = Math.min(coords.y - TABLEPAD, c.y - coords.height - TABLEPAD);
-                            }
-                            loop(attempt + 1);
-                        }
-                    }
-                }
-                loop(0);
-            }
-
-            function dist(c1, c2) {
-                let d1x = c1.x + c1.width / 2;
-                let d2x = c2.x + c2.width / 2;
-                let d1y = c1.y + c1.height / 2;
-                let d2y = c2.y + c2.height / 2;
-                return Math.sqrt((d1x - d2x) * (d1x - d2x) + (d1y - d2y) * (d1y - d2y));
-            }
-
-            function avoidOverlap(coords) {
-                let c1 = $.extend({}, coords);
-                let c2 = $.extend({}, coords);
-                let c3 = $.extend({}, coords);
-                let c4 = $.extend({}, coords);
-                avoidOverlapX(c1, true);
-                avoidOverlapX(c2, false);
-                avoidOverlapY(c3, true);
-                avoidOverlapY(c4, false);
-                let d1 = dist(c1, coords);
-                let d2 = dist(c2, coords) + 10; // favors specific directions
-                let d3 = dist(c3, coords);
-                let d4 = dist(c4, coords) + 10;
-                if (d1 < d2 && d1 < d3 && d1 < d4) return c1;
-                if (d2 < d3 && d2 < d4) return c2;
-                if (d3 < d4) return c3;
-                return c4;
-            }
-
-
-            function tryPlace(table, side) {
-                if (!needsPosition[table]) return true;
-                let bb, c, target;
-                switch (counts[table].length) {
-                    case 0:
-                        // put at bottom
-                        bb = bbox();
-                        c = measureTable(table);
-                        c.x = TABLEPAD;
-                        c.y = bb.y + bb.height + TABLEPAD;
-                        model[table].coords___ = avoidOverlap(c);
-                        needsPosition[table] = false;
-                        break;
-                    case 1:
-                        // put to side of peer
-                        target = counts[table][0];
-                        if (needsPosition[target]) return;
-                        c = measureTable(table);
-                        if (side === true) {
-                            c.x = model[target].coords___.x + model[target].coords___.width + TABLEPAD * 2;
-                        } else {
-                            c.x = model[target].coords___.x - TABLEPAD * 2 - c.width;
-                        }
-                        c.y = model[target].coords___.y + model[target].coords___.height / 2 - c.height / 2;
-                        c = avoidOverlap(c);
-                        model[table].coords___ = c;
-                        needsPosition[table] = false;
-                        break;
-                    case 2:
-                        // put below peer
-                        let target1 = counts[table][0];
-                        let target2 = counts[table][1];
-                        if (needsPosition[target1] && needsPosition[target2]) return; // no reference target
-                        c = measureTable(table);
-                        if (!needsPosition[target1] && !needsPosition[target2]) { // place in between these two
-                            c.x = (model[target1].coords___.x + model[target2].coords___.x) / 2;
-                            c.y = (model[target1].coords___.y + model[target2].coords___.y) / 2;
-                        } else { // use a reference table
-                            let target = (needsPosition[target1] ? target2 : target1);
-                            c.x = model[target].coords___.x + model[target].coords___.width / 2 - c.width / 2;
-                            c.y = model[target].coords___.y;
-                        }
-                        model[table].coords___ = avoidOverlap(c);
-                        needsPosition[table] = false;
-                        break;
-                    default:
-                        // 3 or more
-                        bb = bbox();
-                        c = measureTable(table);
-                        model[table].coords___ = { x: 10, y: bb.y + c.height + TABLEPAD, width: c.width, height: c.height };
-                        needsPosition[table] = false;
-                        break;
-                }
-                if (!needsPosition[table]) {
-                    let right = true;
-                    for (let i = 0; i < counts[table].length; i++) {
-                        if (counts[counts[table][i]].length <= 2) {
-                            tryPlace(counts[table][i], right);
-                            right = !right;
-                        }
-                    }
-                    for (let i = 0; i < counts[table].length; i++) {
-                        if (counts[counts[table][i]].length > 2) {
-                            tryPlace(counts[table][i], right);
-                            right = !right;
-                        }
-                    }
-                }
-            }
-
-            function forcePlace(table) {
-                if (!needsPosition[table]) return true;
-                let bb = bbox();
-                let c = measureTable(table);
-                c.x = TABLEPAD;
-                c.y = bb.y + bb.height + TABLEPAD;
-                model[table].coords___ = avoidOverlap(c);
-                needsPosition[table] = false;
-                for (let i = 0; i < counts[table].length; i++) {
-                    if (counts[counts[table][i]].length <= 2) {
-                        forcePlace(counts[table][i]);
-                    }
-                }
-                for (let i = 0; i < counts[table].length; i++) {
-                    if (counts[counts[table][i]].length > 2) {
-                        forcePlace(counts[table][i]);
-                    }
-                }
-                return true;
-            }
 
             let grid = [];
             let sizeY = [];
@@ -546,35 +246,6 @@
             }
 
             while (mostConstraineds.length > 0) {
-                /*                // find source of longest path, and place it on top
-                                let maxlen=0;
-                                let candidate=null;
-                                function maxlength(table) {
-                                    let passed={};
-                                    passed[table]=true;
-                                    function loop(table,len) {
-                                        let m=0;
-                                        for(let i=0; i<counts[table].length; i++) {
-                                            if (passed[counts[table][i]]) continue;
-                                            passed[counts[table][i]]=true;
-                                            let l=loop(counts[table][i],0)+1;
-                                            passed[counts[table][i]]=false;
-                                            if (l>m) m=l;
-                                        }
-                                        return m;
-                                    }
-                                    return loop(table,0);
-                                }
-                                for(let i=mostConstraineds.length-1; i>=0; i--) {
-                                    let len=maxlength(mostConstraineds[i]);
-                                    if (len>=maxlen) {
-                                        maxlen=len;
-                                        candidate=mostConstraineds[i];
-                                    }
-                                }
-                
-                                if (candidate!=null) gridPlace(candidate,0,0);*/
-
                 gridPlace(mostConstraineds[0], mx, 0);
                 // forgets mostConstrained that are already placed
                 for (let i = mostConstraineds.length - 1; i >= 0; i--) {
@@ -646,46 +317,6 @@
                 }
             }
 
-            /*let most = counts[mostConstraineds[0]].length;
-            if (most > 1) {
-                function setSingleFirst() {
-                    let target = null;
-                    for (let table in model) {
-                        if (counts[table].length == most) { // one of the top tables
-                            for (let table2 in model) {
-                                if (counts[table2].length == 1 && counts[table2][0] == table) {
-                                    if (target == null) {
-                                        // this table has a single out link to one of the most constrained tables
-                                        target = table2;
-                                    } else {
-                                        // however, there are several tables with a single link to one of the most constrainted tables
-                                        // we don't know which one would suit best, so we give up
-                                        target = null;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (target != null) {
-                                // we found a table with a single link to one of the most constrained tables => this is a good starting point
-                                // to start placing the different tables
-                                forcePlace(target);
-                                return;
-                            }
-                        }
-                    }
-                }
-                setSingleFirst();
-            }*/
-
-            /*                for (let i = 0; i < mostConstraineds.length; i++) {
-                                tryPlace(mostConstraineds[i], true);
-                            }*/
-
-            /*for (let i = 0; i < mostConstraineds.length; i++) {
-                forcePlace(mostConstraineds[i]);
-            }*/
-
-
             for (let alias in aliases) {
                 if (!("coords___" in aliases[alias])) {
                     let other = model[aliases[alias].table].coords___;
@@ -698,7 +329,7 @@
         }
 
 
-        function renderTable(table, alias) {
+        function renderTable(ctx, table, alias) {
             let c, title, sel;
             if (alias === undefined) {
                 c = model[table].coords___;
@@ -830,7 +461,7 @@
             }
         }
 
-        function renderDuck(x1, y1, x2, y2, vertical) {
+        function renderDuck(ctx, x1, y1, x2, y2, vertical) {
             const SIZE = 10;
             ctx.moveTo(x1, y1);
             ctx.lineTo(x2, y2);
@@ -848,7 +479,7 @@
             }
         }
 
-        function renderFKTableAlias(src, column, fktgt, fkcolumn, hotspot, total, count) {
+        function renderFKTableAlias(ctx, src, column, fktgt, fkcolumn, hotspot, total, count) {
             if (src === undefined || fktgt === undefined) return;
             let coords = src.coords___.columns[column];
             let coords2 = fktgt.coords___.columns[fkcolumn];
@@ -925,7 +556,7 @@
                 })();
 
                 if (c != null) {
-                    renderDuck(c.x1, c.y1, c.x2, c.y2, c.v);
+                    renderDuck(ctx, c.x1, c.y1, c.x2, c.y2, c.v);
                     ctx.stroke();
                     let w = ctx.measureText(fkcolumn).width;
                     let x, y;
@@ -947,68 +578,197 @@
 
         }
 
-        function renderFK(table, column, fk, total, count) {
-            renderFKTableAlias(model[table], column, model[fk.table], fk.column, { table: table, column: column, fk: fk }, total, count);
+        function renderFK(ctx, table, column, fk, total, count) {
+            renderFKTableAlias(ctx, model[table], column, model[fk.table], fk.column, { table: table, column: column, fk: fk }, total, count);
         }
 
-        function redraw() {
-            if (redrawing) return;
-            redrawing = true;
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.clearRect(0, 0, canvas[0].width, canvas[0].height);
-            hotspots.splice(0, hotspots.length);
-            if (Object.keys(model).length == 0) {
-                ctx.fillText(emptymessage, 10, 10 + textHeight);
-                redrawing = false;
-                return;
+        function resizeCanvas() {
+            let bb = bbox({ x: 0, y: 0, width: 0, height: 0 });
+            canvas.attr("width", Math.max(bb.width + 100, canvas[0].parentElement.clientWidth / zoom));
+            canvas.attr("height", Math.max(bb.height + 100, canvas[0].parentElement.clientHeight / zoom));
+            ctx.width = canvas.width();
+            ctx.height = canvas.height();
+            ctx.font = "14px Arial";
+            phys.repaint();
+        }
+
+        // wait to get a correct measurement on the canvas before adding elements to phys
+
+        function runIt() {
+            ctx.width = canvas.width();
+            ctx.height = canvas.height();
+            ctx.font = "14px Arial";
+            textHeight = ctx.measureText('M').width + 4;
+            if (textHeight > 4) {
+                iconWidth = ctx.measureText("\u{26AF}").width;
+                CHECKBOXSIZE = textHeight;
+                setupPhysModel();
+                $(window).on('resize', resizeCanvas);
+            } else {
+                // too early to get the size of text on the canvas, leave a bit of time to the browser to set ip up correctly
+                setTimeout(runIt, 100);
             }
-            for (let table in model) {
-                ctx.save();
-                ctx.beginPath();
-                renderTable(table);
-                ctx.stroke();
-                ctx.restore();
+        }
+
+        runIt();
+
+        function setupPhysModel() {
+            let indexes = {};
+            function hash(r) {
+                if (r.type == "link") {
+                    return (r.fk.from.alias?r.fk.from.alias:r.fk.from.table) + "!" + r.fk.from.column + "!" + (r.fk.to.alias?r.fk.to.alias:r.fk.to.table) + "!" + r.fk.to.column;
+                } else {
+                    return r.from.table + "!" + r.from.column + "!" + r.to.table + "!" + r.to.column;
+                }
             }
-            for (let table in model) {
-                let totals;
-                for (let column in model[table]) {
-                    if ("fk" in model[table][column]) {
-                        if (totals === undefined) {
-                            totals = {};
-                            for (let column in model[table]) {
-                                if ("fk" in model[table][column]) {
-                                    let fktable = model[table][column].fk.table;
-                                    if (!(fktable in totals)) totals[fktable] = { total: 0, count: 0 };
-                                    totals[fktable].total++;
-                                }
-                                if ("fk2" in model[table][column]) {
-                                    let fktable = model[table][column].fk2.table;
-                                    if (!(fktable in totals)) totals[fktable] = { total: 0, count: 0 };
-                                    totals[fktable].total++;
-                                }
-                            }
+            function tablehash(r) {
+                function link(a, b) {
+                    if (a < b) {
+                        return a + "!" + b;
+                    } else {
+                        return b + "!" + a;
+                    }
+                }
+                if (r.type == "link") {
+                    return link(r.fk.from.table, r.fk.to.table);
+                } else {
+                    return link(r.from.table, r.to.table);
+                }
+            }
+            prepModel();
+            // sync model with phys.model
+            let fks = [];
+            let links = {};
+            let counts = {};
+            for (let i = phys.model.length - 1; i >= 0; i--) { // save current links, removing them from the model
+                if (phys.model[i].type == "link") {
+                    links[hash(phys.model[i])] = phys.model.splice(i, 1)[0];
+                }
+            }
+            for (let k in model) {
+                let table;
+                for (let i = 0; i < phys.model.length; i++) {
+                    if (phys.model[i].table == k) {
+                        table = phys.model[i];
+                        indexes[k] = i;
+                        break;
+                    }
+                }
+                if (table === undefined) {
+                    table = {
+                        type: "rect",
+                        table: k,
+                        draw: function (layers, physmodel) {
+                            selectionModel.clear(null);
+                            this.super.draw(layers, physmodel);
+                            model[this.table]["coords___"].x = this.x;
+                            model[this.table]["coords___"].y = this.y;
+                            layers[4].push((ctx) => {
+                                renderTable(ctx, this.table)
+                            });
                         }
-                        ctx.save();
-                        ctx.beginPath();
-                        let fk = model[table][column]["fk"];
-                        renderFK(table, column, fk, totals[fk.table].total, totals[fk.table].count);
-                        if ("fk2" in model[table][column]) {
-                            let fk = model[table][column]["fk2"];
-                            renderFK(table, column, fk, totals[fk.table].total, totals[fk.table].count);
+                    };
+                    indexes[k] = phys.model.length;
+                    phys.model.push(table);
+                }
+                table.x = model[k]["coords___"].x;
+                table.y = model[k]["coords___"].y;
+                table.width = model[k]["coords___"].width;
+                table.height = model[k]["coords___"].height;
+                for (let c in model[k]) {
+                    if (c == 'coords___') continue;
+                    let col = model[k][c];
+                    if ('fk' in col) {
+                        fks.push({
+                            from: { table: k, column: c },
+                            to: col.fk
+                        })
+                        if ('fk2' in col) { // fk2 is used by the merge tool and reflects the alternate fk for this table.column
+                            fks.push({
+                                from: { table: k, column: c },
+                                to: col.fk2
+                            })
                         }
-                        totals[fk.table].count++;
-                        ctx.stroke();
-                        ctx.restore();
                     }
                 }
             }
-            for (let alias in aliases) {
-                ctx.save();
-                ctx.beginPath();
-                renderTable(aliases[alias].table, alias);
-                ctx.stroke();
-                ctx.restore();
+
+            for (let i = phys.model.length - 1; i >= 0; i--) { // remove old elements
+                if (phys.model[i].type == "rect" && !("table" in phys.model[i])) continue;
+                if (!(phys.model[i].table in model)) {
+                    phys.model.splice(i, 1);
+                }
             }
+            // now onto aliases
+            for (let k in aliases) {
+                let alias;
+                for (let i = 0; i < phys.model.length; i++) {
+                    if (phys.model[i].alias === k) {
+                        alias = phys.model[i];
+                        indexes[k]=i;
+                        break;
+                    }
+                }
+                if (alias === undefined) {
+                    alias = {
+                        type: "rect",
+                        alias: k,
+                        draw: function (layers, physmodel) {
+                            selectionModel.clear(null);
+                            this.super.draw(layers, physmodel);
+                            aliases[this.alias]["coords___"].x = this.x;
+                            aliases[this.alias]["coords___"].y = this.y;
+                            layers[4].push((ctx) => {
+                                renderTable(ctx, aliases[this.alias].table, this.alias)
+                            });
+                        }
+                    };
+                    indexes[k]=phys.model.length;
+                    phys.model.push(alias);
+                }
+                alias.x = aliases[k]["coords___"].x;
+                alias.y = aliases[k]["coords___"].y;
+                alias.width = aliases[k]["coords___"].width;
+                alias.height = aliases[k]["coords___"].height;
+            }
+            for (let i = phys.model.length - 1; i >= 0; i--) { // remove old elements
+                if (phys.model[i].type == "rect" && !("alias" in phys.model[i])) continue;
+                if (!(phys.model[i].alias in aliases)) {
+                    phys.model.splice(i, 1);
+                }
+            }
+            // links are always placed after tables so that the table has a chance to compute coords for its columns
+            for (let i = 0; i < fks.length; i++) {
+                let h = hash(fks[i]);
+                let link;
+                if (h in links) {
+                    // get back existing link in phys.model, removing it so that it is placed back at the end
+                    link = links[h];
+                    delete links[h];
+                } else {
+                    link = {
+                        type: 'link',
+                        fromborder: true,
+                        toborder: true
+                    }
+                }
+                phys.model.push(link);
+                link.from = indexes[fks[i].from.table];
+                link.to = indexes[fks[i].to.table];
+                link.fk = fks[i];
+                let th = tablehash(link);
+                link.count = counts[th] || 0;
+                counts[th] = link.count + 1;
+                if (counts[th]>3) debugger;
+                link.draw = function (layers, physmodel) {
+                    layers[5].push((ctx) => {
+                        renderFK(ctx, fks[i].from.table, fks[i].from.column,
+                            fks[i].to, counts[th], link.count);
+                    });
+                }
+            }
+
+            // links for aliases
             function toTarget(tgt) {
                 if (tgt.alias in aliases) {
                     return aliases[tgt.alias];
@@ -1016,107 +776,126 @@
                     return model[tgt.table];
                 }
             }
-
             for (let alias in aliases) {
                 let total = aliases[alias].toFK.length + aliases[alias].fromFK.length;
                 if (total > 0) {
                     let count = 0;
                     for (let i = 0; i < aliases[alias].toFK.length; i++) {
-                        ctx.save();
-                        ctx.beginPath();
-                        let hotspot = {
-                            table: aliases[alias].table,
-                            alias: alias,
-                            column: aliases[alias].toFK[i].column,
-                            fk: {
+                        let fk = {
+                            from: {
+                                table: aliases[alias].table,
+                                alias: alias,
+                                column: aliases[alias].toFK[i].column
+                            },
+                            to: {
                                 table: aliases[alias].toFK[i].table,
                                 column: aliases[alias].toFK[i].fkcolumn
                             }
-                        };
-                        if ("alias" in aliases[alias].toFK[i]) {
-                            hotspot.fk.alias = aliases[alias].toFK[i].alias;
                         }
-                        renderFKTableAlias(aliases[alias], aliases[alias].toFK[i].column, toTarget(aliases[alias].toFK[i]), aliases[alias].toFK[i].fkcolumn, hotspot, total, count);
+                        if ("alias" in aliases[alias].toFK[i]) {
+                            fk.to.alias=aliases[alias].toFK[i].alias;
+                        }
+                        let h=hash({type:"link",fk});
+                        let link;
+                        if (h in links) {
+                            link=links[h]; // reuse existing link
+                        } else {
+                            link={
+                                type:'link',
+                                fromborder:true,
+                                toborder:true
+                            }
+                        }
+                        phys.model.push(link);
+                        link.from = indexes[fk.from.alias||fk.from.table];
+                        link.to = indexes[fk.to.alias||fk.to.table];
+                        link.fk=fk;
+                        let icount=count;
+                        link.draw=function(layers,physmodel) {
+                            layers[5].push((ctx)=>{
+                                ctx.save();
+                                ctx.beginPath();
+                                let hotspot = {
+                                    table: fk.from.table,
+                                    alias: fk.from.alias,
+                                    column: fk.from.column,
+                                    fk: fk.to
+                                };
+                                renderFKTableAlias(ctx,aliases[alias], fk.from.column, toTarget(aliases[alias].toFK[i]), aliases[alias].toFK[i].fkcolumn, hotspot, total, icount);
+                                ctx.stroke();
+                                ctx.restore();                
+                            })
+                        }
                         count++;
-                        ctx.stroke();
-                        ctx.restore();
                     }
                     for (let i = 0; i < aliases[alias].fromFK.length; i++) {
                         if ("alias" in aliases[alias].fromFK[i]) {
                             continue; // will be drawn from the other alias table side
                         }
-                        ctx.save();
-                        ctx.beginPath();
-                        let hotspot = {
-                            table: aliases[alias].fromFK[i].table,
-                            column: aliases[alias].fromFK[i].fkcolumn,
-                            fk: {
+                        let fk = {
+                            from: {
+                                table: aliases[alias].fromFK[i].table,
+                                column: aliases[alias].fromFK[i].fkcolumn
+                            },
+                            to: {
                                 table: aliases[alias].table,
-                                alias: alias,
+                                alias:alias,
                                 column: aliases[alias].fromFK[i].column
                             }
-                        };
-
-                        renderFKTableAlias(toTarget(aliases[alias].fromFK[i]), aliases[alias].fromFK[i].fkcolumn, aliases[alias], aliases[alias].fromFK[i].column, hotspot, total, count);
+                        }
+                        if ("alias" in aliases[alias].fromFK[i]) {
+                            fk.from.alias=aliases[alias].fromFK[i].alias;
+                        }
+                        let h=hash({type:"link",fk});
+                        let link;
+                        if (h in links) {
+                            link=links[h]; // reuse existing link
+                        } else {
+                            link={
+                                type:'link',
+                                fromborder:true,
+                                toborder:true
+                            }
+                        }
+                        phys.model.push(link);
+                        link.from = indexes[fk.from.alias||fk.from.table];
+                        link.to = indexes[fk.to.alias||fk.to.table];
+                        link.fk=fk.fk;
+                        let icount=count;
+                        link.draw=function(layers,physmodel) {
+                            layers[5].push((ctx)=>{
+                                ctx.save();
+                                ctx.beginPath();
+                                let hotspot = {
+                                    table: fk.from.table,
+                                    column: fk.from.column,
+                                    fk: fk.to
+                                };
+                                if ("alias" in fk.from) hotspot.alias=fk.from.alias;
+                                renderFKTableAlias(ctx,toTarget(aliases[alias].fromFK[i]), fk.from.column, aliases[alias], fk.to.column, hotspot, total, icount);
+                                ctx.stroke();
+                                ctx.restore();                
+                            })
+                        }
                         count++;
-                        ctx.stroke();
-                        ctx.restore();
                     }
                 }
             }
-            redrawing = false;
+            phys.repaint();
         }
-
-        let resizeFunction = function (callback) {
-            if (canvas == null) {
-                if (callback) callback();
-                return;
-            }
-            let bb = bbox({ x: 0, y: 0, width: 0, height: 0 });
-            canvas.attr("width", Math.max(bb.width + 100, canvas[0].parentElement.clientWidth / zoom));
-            canvas.attr("height", Math.max(bb.height + 100, canvas[0].parentElement.clientHeight / zoom));
-            ctx.width = canvas.width();
-            ctx.height = canvas.height();
-            ctx.font = "14px Arial";
-            redraw();
-            if (textHeight === undefined) {
-                textHeight = ctx.measureText('M').width + 4;
-                iconWidth = ctx.measureText("\u{26AF}").width;
-                CHECKBOXSIZE = textHeight;
-                prepModel();
-                redrawing = false;
-                setTimeout(() => { resizeFunction(callback); }, 100);
-            } else {
-                if (ondrawn !== undefined) {
-                    let f = ondrawn;
-                    ondrawn = undefined;
-                    f();
-                }
-                if (callback) callback();
-            }
-        }
-
-        $(window).on('resize', ()=>{resizeFunction();});
-
-        resizeFunction();
 
         return {
             redraw: function () {
-                eventLock = true; // when redraw is called, events are frozen as they may trigger information not yet refreshed
-                try {
-                    prepModel(); // from outside, the model might have changed and needs a refresh
-                    resizeFunction(() => { eventLock = false; }); // redraws + recomputes scrollbars    
-                } catch (e) {
-                    eventLock=false;
-                    throw e;
-                }
+                prepModel();
+                setupPhysModel();
             },
             textHeight,
             destroy() {
-                $(window).off('resize', resizeFunction);
+                phys.model.splice(0, phys.model.length);
+                $(window).off('resize', resizeCanvas);
                 root.empty();
             },
-            resize: resizeFunction
+            resize: resizeCanvas
         }
     }
 

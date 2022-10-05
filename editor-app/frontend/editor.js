@@ -52,7 +52,7 @@ $.SQLEditor = {};
         contextOverlay.css({
             position: 'absolute',
             left: event.offsetX + r.x,
-            top: event.offsetY + r.y
+            top: event.offsetY + r.y-8
         });
     }
 
@@ -360,8 +360,7 @@ $.SQLEditor = {};
                             conf.schemaUI.redraw();
                         });
                     }
-                }
-                if (event.which == 3) {
+                } else if (event.which == 3) {
                     positionContextOverlay(event);
                     if ("fk" in target) {
                         if ((target.table in schema) && (target.column in schema[target.table]) && (target.fk.table in schema) && (target.fk.column in schema[target.fk.table])) { // sanity check
@@ -387,7 +386,6 @@ $.SQLEditor = {};
                         }
                     } else if ("column" in target) {
                         if ((target.table in schema) && (target.column in schema[target.table])) { // sanity check
-
                             function editCallback(def) {
                                 try {
                                     ucc.diff(() => {
@@ -480,7 +478,7 @@ $.SQLEditor = {};
                             setMenu(menu);
                         }
                     }
-                }
+                } 
             },
             isSelected(target) {
                 return Object.equals(selected, target);
