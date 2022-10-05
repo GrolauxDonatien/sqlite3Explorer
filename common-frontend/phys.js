@@ -38,7 +38,7 @@
             config.friction = FRICTION;
             const FRICTION2 = FRICTION * FRICTION;
             // when rectangles overlap, the repulsion is based on dots in the rectangles, which are placed at this distance apart
-            const REPRESENTATIVEDISTANCE = config.representativeDistance || 50;
+            const REPRESENTATIVEDISTANCE = config.representativeDistance || 10;
             config.representativeDistance = REPRESENTATIVEDISTANCE;
             // vectors are limited by this max speed
             const MAXSPEED = config.maxSpeed || 5;
