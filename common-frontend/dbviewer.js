@@ -495,7 +495,7 @@
             if (src == fktgt) {
                 let w = ctx.measureText(fkcolumn).width;
                 let sx = tcoords.x + tcoords.width + w + 20;
-                renderDuck(tcoords.x + tcoords.width, coords.y + coords.height / 2 + 2, sx, coords.y + coords.height / 2 + 2, true);
+                renderDuck(ctx,tcoords.x + tcoords.width, coords.y + coords.height / 2 + 2, sx, coords.y + coords.height / 2 + 2, true);
                 ctx.moveTo(sx, coords.y + coords.height / 2 + 2);
                 ctx.lineTo(sx, coords2.y + coords2.height / 2 + 2);
                 ctx.lineTo(tcoords.x + tcoords.width, coords2.y + coords2.height / 2 + 2);
@@ -604,6 +604,7 @@
                 CHECKBOXSIZE = textHeight;
                 setupPhysModel();
                 $(window).on('resize', resizeCanvas);
+                resizeCanvas();
             } else {
                 // too early to get the size of text on the canvas, leave a bit of time to the browser to set ip up correctly
                 setTimeout(runIt, 100);
@@ -614,6 +615,7 @@
 
         function setupPhysModel() {
             let indexes = {};
+            phys.freezeUntilRepaint();
             function hash(r) {
                 if (r.type == "link") {
                     return (r.fk.from.alias?r.fk.from.alias:r.fk.from.table) + "!" + r.fk.from.column + "!" + (r.fk.to.alias?r.fk.to.alias:r.fk.to.table) + "!" + r.fk.to.column;
@@ -644,6 +646,12 @@
                 if (phys.model[i].type == "link") {
                     let link = phys.model.splice(i, 1)[0];
                     links[hash(link)] = link;
+                }
+            }
+            for (let i = phys.model.length - 1; i >= 0; i--) { // remove old elements
+                if (phys.model[i].type == "rect" && !("table" in phys.model[i])) continue;
+                if (!(phys.model[i].table in model)) {
+                    phys.model.splice(i, 1);
                 }
             }
             for (let k in model) {
@@ -694,12 +702,7 @@
                 }
             }
 
-            for (let i = phys.model.length - 1; i >= 0; i--) { // remove old elements
-                if (phys.model[i].type == "rect" && !("table" in phys.model[i])) continue;
-                if (!(phys.model[i].table in model)) {
-                    phys.model.splice(i, 1);
-                }
-            }
+
             // now onto aliases
             for (let k in aliases) {
                 let alias;
@@ -883,6 +886,7 @@
                 }
             }
             phys.repaint();
+            resizeCanvas();
         }
 
         return {

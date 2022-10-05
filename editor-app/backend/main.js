@@ -11,7 +11,7 @@ const fspath = require('path');
 const { exception } = require('console');
 const { open } = require('inspector');
 const LIMIT = 1000;
-const VERSION = "1.0.11";
+const VERSION = "1.0.14";
 
 let db = null;
 let win;
@@ -159,7 +159,7 @@ const template = [
             }]
     }, {
         label: 'Help',
-        submenu: [
+        submenu: (DEBUG?[
             {
                 label: 'Dev Tools',
                 click() {
@@ -171,7 +171,7 @@ const template = [
                 click() {
                     win.webContents.send('main', { trigger: "reload" });
                 }
-            },
+            }]:[]).concat([
             {
                 label: 'About',
                 click() {
@@ -188,8 +188,7 @@ const template = [
                         console.log(checkboxChecked);
                     });
                 }
-            }
-        ]
+            }])
     }
 ]
 

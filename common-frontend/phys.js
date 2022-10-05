@@ -6,6 +6,8 @@
             getBbox, getClosest, distance, shiftFrom, shiftTo, shiftModel
         } = root;
 
+        let freeze=false;
+
         function createPhysCanvas(root, config = {}) {
             if (!(root instanceof Element) || root.tagName != 'CANVAS') {
                 throw new Exception("Invalid parameter for canvas");
@@ -586,6 +588,7 @@
 
             function repaint() {
                 if (!init) return; // not yet initialized, repaint is called anyway at the end of initialization
+                freeze=false;
                 if (previousTs !== undefined) return; // paint is already bound to be called
                 triggerEvent("startPaint");
                 window.requestAnimationFrame(paint);
@@ -604,7 +607,7 @@
                         if (prop in model && typeof model[prop] == "function") {
                             return function () {
                                 let r = model[prop].apply(model, arguments);
-                                repaint();
+                                if (!freeze) repaint();
                                 setTimeout(checkBoundaries,0);
                                 return r;
                             }
@@ -914,6 +917,9 @@
 
             const physCanvas = {
                 model: proxy,
+                freezeUntilRepaint() {
+                    freeze=true;
+                },
                 animate: function (a) {
                     a._start = new Date();
                     a._last = 0;
