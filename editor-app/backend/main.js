@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 
-const DEBUG = true;
+const DEBUG = false;
 const APP = __dirname + "/../frontend/editor.html";
 const QUERY = __dirname + "/../frontend/query.html";
 const CONSOLE = __dirname + "/../frontend/console.html";
@@ -11,7 +11,7 @@ const fspath = require('path');
 const { exception } = require('console');
 const { open } = require('inspector');
 const LIMIT = 1000;
-const VERSION = "1.0.14";
+const VERSION = "1.0.17";
 
 let db = null;
 let win;

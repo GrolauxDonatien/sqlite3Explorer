@@ -44,16 +44,31 @@ $.SQLEditor = {};
         contextOverlay.remove();
         contextOverlay.removeAttr("style");
         contextOverlay.removeAttr("contenteditable");
+        contextOverlay.removeAttr('data-table');
+        contextOverlay.removeAttr('data-column');
         contextOverlay.off('keydown');
     }
 
     function positionContextOverlay(event) {
-        let r = event.currentTarget.getBoundingClientRect();
+        let r = (event.currentTarget||event.target).getBoundingClientRect();
         contextOverlay.css({
             position: 'absolute',
             left: event.offsetX + r.x,
             top: event.offsetY + r.y-8
         });
+    }
+
+    function ontablemove(event) {
+        function toInt(s) {
+            return parseFloat(s.substring(0,s.length-2))
+        }
+        let table=contextOverlay.attr('data-table');
+        if (event.table==table) {
+            contextOverlay.css({
+                left:toInt(contextOverlay.css('left'))+event.tx-event.ox,
+                top:toInt(contextOverlay.css('top'))+event.ty-event.oy,
+            })
+        }
     }
 
     function setMenu(menu) {
@@ -302,6 +317,10 @@ $.SQLEditor = {};
         }, callback);
     }
 
+    function mutate(o) {
+        return $.extend({},o);
+    }
+
     let sm = function (ucc) {
         let selected = {};
 
@@ -311,8 +330,8 @@ $.SQLEditor = {};
                 selected = target;
                 if (event.which == 1 && !("column" in target) && ("table" in target)) {
                     if (target.table in schema) { // sanity check
-                        // rename table
-                        let r = event.currentTarget.getBoundingClientRect();
+                        // rename table                        
+                        let r = (event.currentTarget||event.target).getBoundingClientRect();
                         contextOverlay.css({
                             position: 'absolute',
                             left: schema[target.table].coords___.x - 1 + r.x + conf.padx,
@@ -320,6 +339,7 @@ $.SQLEditor = {};
                             width: schema[target.table].coords___.width - 8,
                             height: conf.schemaUI.textHeight
                         });
+                        contextOverlay.attr('data-table', target.table);
                         setEditName(target.table, (rename) => {
                             try {
                                 ucc.diff(
@@ -337,7 +357,7 @@ $.SQLEditor = {};
                 } else if (event.which == 1 && !("fk" in target) && ("column" in target)) {
                     if ((target.table in schema) && (target.column in schema[target.table])) { // sanity check
                         // rename column
-                        let r = event.currentTarget.getBoundingClientRect();
+                        let r = (event.currentTarget||event.target).getBoundingClientRect();
                         let t = schema[target.table].coords___.columns[target.column];
                         contextOverlay.css({
                             position: 'absolute',
@@ -346,6 +366,8 @@ $.SQLEditor = {};
                             width: schema[target.table].coords___.width - 4 - conf.schemaUI.textHeight * 3,
                             height: conf.schemaUI.textHeight
                         });
+                        contextOverlay.attr('data-table', target.table);
+                        contextOverlay.attr('data-column', target.column);
                         setEditName(target.column, (rename) => {
                             try {
                                 ucc.diff(
@@ -401,6 +423,7 @@ $.SQLEditor = {};
                             }
                             let menu = {
                                 [`Rename column <i>${target.column}</i>...`]: () => {
+                                    event=mutate(event);
                                     event.which = 1;
                                     self.select(target, event);
                                 },
@@ -422,6 +445,7 @@ $.SQLEditor = {};
                                     }, 1);
                                 }, "sep1": null,
                                 [`Rename table <i>${target.table}</i>...`]: () => {
+                                    event=mutate(event);
                                     event.which = 1;
                                     delete target.column;
                                     self.select(target, event);
@@ -453,6 +477,7 @@ $.SQLEditor = {};
                         if (target.table in schema) { // sanity check
                             let menu = {
                                 [`Rename table <i>${target.table}</i>...`]: () => {
+                                    event=mutate(event);
                                     event.which = 1;
                                     self.select(target, event);
                                 },
@@ -505,6 +530,7 @@ $.SQLEditor = {};
                                 error(e.message);
                             }
                             conf.schemaUI.redraw();
+                            event=mutate(event);
                             event.which = 1;
                             self.select({
                                 "table": str
@@ -737,7 +763,8 @@ $.SQLEditor = {};
             checkboxes: false,
             radios: true,
             selectionModel: sm(ucc),
-            emptymessage: "Right-click or Shift+Left-click on this area to start adding a table"
+            emptymessage: "Right-click or Shift+Left-click on this area to start adding a table",
+            ontablemove
         });
         conf.root = el;
         conf.schemaUI = schemaUI;

@@ -35,7 +35,7 @@
         }
     }
 
-    function createDBViewer({ model, aliases: aliases, root, events, checkboxes, radios, colors, selectionModel, ondrawn, emptymessage = '' }) {
+    function createDBViewer({ model, aliases: aliases, root, events, checkboxes, radios, colors, selectionModel, ontablemove }) {
 
         selectionModel.clear();
         if (checkboxes === undefined) checkboxes = false;
@@ -75,6 +75,9 @@
 
         function rightclick(event, pos) {
             if (event.button == 0 && event.shiftKey == true) {
+                let o={}; // makes event mutable
+                for(let k in event) o[k]=event[k];
+                event=o;
                 event.button = 2;
                 event.shiftKey = false;
                 event.which = 3; // shift+left click = right click
@@ -97,6 +100,7 @@
         drawingFK=null;
 
         phys.addEventListener("dragStart", function(event) {
+            selectionModel.clear(null);
             let pos=getPos(event);
             if (radios) {
                 let tgt=getTarget(pos);
@@ -721,10 +725,19 @@
                         type: "rect",
                         table: k,
                         draw: function (layers, physmodel) {
-                            selectionModel.clear(null);
                             this.super.draw(layers, physmodel);
-                            model[this.table]["coords___"].x = this.x;
-                            model[this.table]["coords___"].y = this.y;
+                            let ox=model[this.table]["coords___"].x;
+                            let oy=model[this.table]["coords___"].y;
+                            let tx=this.x;
+                            let ty=this.y;
+
+                            if (ontablemove!==undefined && !(ox==tx && oy==ty)) {
+                                ontablemove({
+                                    table:this.table, ox,oy,tx,ty
+                                })
+                            }
+                            model[this.table]["coords___"].x= tx;
+                            model[this.table]["coords___"].y = ty;
                             layers[4].push((ctx) => {
                                 renderTable(ctx, this.table)
                             });
