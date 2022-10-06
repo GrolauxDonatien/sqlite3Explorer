@@ -739,7 +739,9 @@
                             model[this.table]["coords___"].x= tx;
                             model[this.table]["coords___"].y = ty;
                             layers[4].push((ctx) => {
-                                renderTable(ctx, this.table)
+                                ctx.beginPath();
+                                renderTable(ctx, this.table);
+                                ctx.stroke();
                             });
                         }
                     };
@@ -789,7 +791,9 @@
                             aliases[this.alias]["coords___"].x = this.x;
                             aliases[this.alias]["coords___"].y = this.y;
                             layers[4].push((ctx) => {
+                                ctx.beginPath();
                                 renderTable(ctx, aliases[this.alias].table, this.alias)
+                                ctx.stroke();
                             });
                         }
                     };
