@@ -679,6 +679,7 @@
                 "stopPaint": [],
                 "beforePaint": [],
                 "afterPaint": [],
+                "dragStart": []
             };
 
             function addEventListener(event, fn) {
@@ -696,13 +697,15 @@
                 }
             }
 
-            function triggerEvent(which) {
+            function triggerEvent(which, event={}) {
                 for (let i = 0; i < events[which].length; i++) {
                     let propagate = true;
-                    let event = { stopPropagation() { propagate = false; }, physCanvas };
-                    events[which][i](event);
-                    if (!propagate) return;
+                    event.stopPropagation=function() { propagate = false; };
+                    event.physCanvas=physCanvas;
+                    if (events[which][i](event)===false) propagate=false;
+                    if (!propagate) return propagate;
                 }
+                return true;
             }
 
             function listen(e) {
@@ -819,8 +822,15 @@
                 switch (state) {
                     case "MAYBE":
                         if (distance({ x: ox, y: oy }, { x: event.canvasX, y: event.canvasY }) > 2 * zoom) {
-                            state = "DRAG";
-                            // leak into drag below;
+                            event.oX=ox;
+                            event.oY=oy;
+                            if (triggerEvent("dragStart",event)) {
+                                state = "DRAG";
+                                // let it leak into DRAG below;
+                            } else {
+                                state = "NONE";
+                                return false;
+                            }
                         } else {
                             return false;
                         }
@@ -949,7 +959,6 @@
                     return zoom;
                 },
                 config,
-                context,
                 canvas: root
             };
 

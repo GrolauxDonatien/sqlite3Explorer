@@ -84,18 +84,71 @@
             selectionModel.select(tgt, event, pos);
         }
 
+        /*
+
+        TODO : if (radios) then there is a need to manage the FK tracing between two tables
+        part of the code is here
+        but it also involves help from phys : 
+            add dragstart event
+            if trigger function returns false then phys cancels its own table dragging mechanism
+            + with mousemove and mouseup, should be able to achieve it
+        */
+
+        drawingFK=null;
+
+        phys.addEventListener("dragStart", function(event) {
+            let pos=getPos(event);
+            if (radios) {
+                let tgt=getTarget(pos);
+                if (tgt != null && ("column" in tgt) && event.oX > tgt.coords.x && event.oX < tgt.coords.x + 12) {
+                    drawingFK=tgt;
+                    drawingFK.ctx=event.physCanvas.canvas.getContext("2d");
+                    drawingFK.repaint=event.physCanvas.repaint;
+                    return false;
+                }
+            }
+        });
+
+        phys.addEventListener("afterPaint", function() {
+            if (drawingFK!=null) {
+                drawingFK.ctx.beginPath();
+                renderDuck(drawingFK.ctx, drawingFK.coords.x - 3, drawingFK.coords.y + textHeight / 2, drawingFK.toX, drawingFK.toY, true);
+                drawingFK.ctx.stroke();
+            }
+        });
+
+        phys.addEventListener("mousemove", function(event) {
+            if (drawingFK!=null) {
+                drawingFK.toX=event.canvasX;
+                drawingFK.toY=event.canvasY;
+                drawingFK.repaint();
+            }
+        });
+
         phys.addEventListener("click", function (event) {
             let pos = getPos(event);
             rightclick(event, pos);
         });
 
+        function captureClick(e) {
+            e.stopPropagation(); // Stop the click from being propagated.
+            window.removeEventListener('click', captureClick, true); // cleanup
+        }
+
         phys.addEventListener("mouseup", function (event) {
             let pos = getPos(event);
             let tgt = getTarget(pos);
-            if (tgt == null) {
-                selectionModel.clear(event);
-            } else if (event.which != 1) {
-                rightclick(event, pos);
+            if (drawingFK!=null) {
+                delete tgt.coords;
+                selectionModel.fk({table:drawingFK.table, column:drawingFK.column},tgt,event,pos);
+                drawingFK=null;
+                window.addEventListener('click', captureClick, true);
+            } else {
+                if (tgt == null) {
+                    selectionModel.clear(event);
+                } else if (event.which != 1) {
+                    rightclick(event, pos);
+                }    
             }
         });
 
