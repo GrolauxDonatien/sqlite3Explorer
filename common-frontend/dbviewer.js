@@ -49,7 +49,7 @@
         let canvas = $('<canvas class="navdataflow" style="font:serif 20px" width="1400" height="1000">');
         canvas.css("zoom", (zoom * 100) + "%");
         root.append(canvas);
-        let phys = createPhysCanvas(canvas[0], { font: '14px Arial' });
+        let phys = createPhysCanvas(canvas[0], { font: '14px Arial', zoomable: false }); // not zoomable because the overlay does not take it into account yet
 
         const ctx = canvas[0].getContext("2d");
         ctx.font = "18px Arial";
@@ -75,9 +75,9 @@
 
         function rightclick(event, pos) {
             if (event.button == 0 && event.shiftKey == true) {
-                let o={}; // makes event mutable
-                for(let k in event) o[k]=event[k];
-                event=o;
+                let o = {}; // makes event mutable
+                for (let k in event) o[k] = event[k];
+                event = o;
                 event.button = 2;
                 event.shiftKey = false;
                 event.which = 3; // shift+left click = right click
@@ -97,38 +97,38 @@
             + with mousemove and mouseup, should be able to achieve it
         */
 
-        drawingFK=null;
+        drawingFK = null;
 
-        phys.addEventListener("dragStart", function(event) {
+        phys.addEventListener("dragStart", function (event) {
             selectionModel.clear(null);
-            let pos=getPos(event);
+            let pos = getPos(event);
             if (radios) {
-                let tgt=getTarget(pos);
+                let tgt = getTarget(pos);
                 if (tgt != null && ("column" in tgt) && event.oX > tgt.coords.x && event.oX < tgt.coords.x + 12) {
-                    drawingFK=tgt;
-                    drawingFK.ctx=event.physCanvas.canvas.getContext("2d");
-                    drawingFK.repaint=event.physCanvas.repaint;
+                    drawingFK = tgt;
+                    drawingFK.ctx = event.physCanvas.canvas.getContext("2d");
+                    drawingFK.repaint = event.physCanvas.repaint;
                     return false;
                 }
             }
         });
 
-        phys.addEventListener("dragStop", function(event) {
+        phys.addEventListener("dragStop", function (event) {
             resizeCanvas();
         });
 
-        phys.addEventListener("afterPaint", function() {
-            if (drawingFK!=null) {
+        phys.addEventListener("afterPaint", function () {
+            if (drawingFK != null) {
                 drawingFK.ctx.beginPath();
                 renderDuck(drawingFK.ctx, drawingFK.coords.x - 3, drawingFK.coords.y + textHeight / 2, drawingFK.toX, drawingFK.toY, true);
                 drawingFK.ctx.stroke();
             }
         });
 
-        phys.addEventListener("mousemove", function(event) {
-            if (drawingFK!=null) {
-                drawingFK.toX=event.canvasX;
-                drawingFK.toY=event.canvasY;
+        phys.addEventListener("mousemove", function (event) {
+            if (drawingFK != null) {
+                drawingFK.toX = event.canvasX;
+                drawingFK.toY = event.canvasY;
                 drawingFK.repaint();
             }
         });
@@ -146,22 +146,22 @@
         phys.addEventListener("mouseup", function (event) {
             let pos = getPos(event);
             let tgt = getTarget(pos);
-            if (drawingFK!=null) {
-                if (tgt!=null) {
+            if (drawingFK != null) {
+                if (tgt != null) {
                     delete tgt.coords;
-                    selectionModel.fk({table:drawingFK.table, column:drawingFK.column},tgt,event,pos);    
-                    drawingFK=null;
+                    selectionModel.fk({ table: drawingFK.table, column: drawingFK.column }, tgt, event, pos);
+                    drawingFK = null;
                 } else {
-                    drawingFK=null;
+                    drawingFK = null;
                     phys.repaint();
                 }
                 window.addEventListener('click', captureClick, true);
-        } else {
+            } else {
                 if (tgt == null) {
                     selectionModel.clear(event);
                 } else if (event.which != 1) {
                     rightclick(event, pos);
-                }    
+                }
             }
         });
 
@@ -425,14 +425,16 @@
                 ctx.font = "italic " + ctx.font;
                 sel = { alias, table };
             }
+            ctx.beginPath();
             ctx.fillStyle = WHITE;
             ctx.fillRect(c.x, c.y, c.width, c.height);
             let defcolor = colors ? selectionModel.color(sel) : BLACK;
             ctx.strokeStyle = selectionModel.isSelected(sel) ? DARKBLUE : defcolor;
-            ctx.fillStyle = defcolor
+            ctx.fillStyle = defcolor;
             ctx.rect(c.x, c.y, c.width, c.height);
             ctx.moveTo(c.x, c.y + textHeight + 6);
-            ctx.lineTo(c.x + c.width, c.y + textHeight + 6);
+            ctx.lineTo(c.x+c.width, c.y + textHeight + 6)
+
             if (checkboxes) {
                 ctx.rect(c.x + 2 + CHECKPADX, c.y + 2 + CHECKPADY, CHECKBOXSIZE - 4, CHECKBOXSIZE - 4);
                 if (selectionModel.isSelected(sel)) {
@@ -485,7 +487,6 @@
                         ctx.fillStyle = defcolor;
                         ctx.fill();
                         ctx.stroke();
-                        ctx.beginPath();
                     }
                     tx = c.x + 2 + CHECKBOXSIZE;
                 } else {
@@ -525,9 +526,11 @@
                     });
                 }
             }
+            ctx.stroke();
         }
 
         function renderDuck(ctx, x1, y1, x2, y2, vertical) {
+            ctx.beginPath();
             const SIZE = 10;
             ctx.moveTo(x1, y1);
             ctx.lineTo(x2, y2);
@@ -543,6 +546,7 @@
                 ctx.lineTo(tgtX, tgtY);
                 ctx.lineTo(x1 + 5, y1);
             }
+            ctx.stroke();
         }
 
         function renderFKTableAlias(ctx, src, column, fktgt, fkcolumn, hotspot, total, count) {
@@ -561,12 +565,11 @@
             if (src == fktgt) {
                 let w = ctx.measureText(fkcolumn).width;
                 let sx = tcoords.x + tcoords.width + w + 20;
-                renderDuck(ctx,tcoords.x + tcoords.width, coords.y + coords.height / 2 + 2, sx, coords.y + coords.height / 2 + 2, true);
+                renderDuck(ctx, tcoords.x + tcoords.width, coords.y + coords.height / 2 + 2, sx, coords.y + coords.height / 2 + 2, true);
                 ctx.moveTo(sx, coords.y + coords.height / 2 + 2);
                 ctx.lineTo(sx, coords2.y + coords2.height / 2 + 2);
                 ctx.lineTo(tcoords.x + tcoords.width, coords2.y + coords2.height / 2 + 2);
                 ctx.stroke();
-                ctx.save();
                 ctx.beginPath();
                 ctx.fillStyle = WHITE;
                 sx -= w / 2;
@@ -576,7 +579,6 @@
                 ctx.rect(sx - 2, sy - 2, w + 4, textHeight + 4);
                 ctx.fillText(fkcolumn, sx, sy + textHeight - 2);
                 ctx.stroke();
-                ctx.restore();
                 hotspots.push($.extend({ coords: { x: sx - 2, y: sy - 2, width: w + 4, height: textHeight + 4 } }, hotspot));
             } else {
                 let c = (function () {
@@ -623,20 +625,18 @@
 
                 if (c != null) {
                     renderDuck(ctx, c.x1, c.y1, c.x2, c.y2, c.v);
-                    ctx.stroke();
                     let w = ctx.measureText(fkcolumn).width;
                     let x, y;
                     x = (c.x1 + c.x2) / 2 - w / 2;
                     y = (c.y1 + c.y2) / 2 - textHeight / 2;
-                    ctx.save();
                     ctx.beginPath();
                     ctx.fillStyle = WHITE;
                     ctx.fillRect(x - 2, y - 2, w + 4, textHeight + 4);
                     ctx.fillStyle = isSelected ? DARKBLUE : defcolor;
+                    ctx.strokeStyle = isSelected ? DARKBLUE : defcolor;
                     ctx.rect(x - 2, y - 2, w + 4, textHeight + 4);
                     ctx.fillText(fkcolumn, x, y + textHeight - 2);
                     ctx.stroke();
-                    ctx.restore();
                     hotspots.push($.extend({ coords: c }, hotspot));
                     hotspots.push($.extend({ coords: { x: x - 2, y: y - 2, width: w + 4, height: textHeight + 4 } }, hotspot));
                 }
@@ -684,7 +684,7 @@
             phys.freezeUntilRepaint();
             function hash(r) {
                 if (r.type == "link") {
-                    return (r.fk.from.alias?r.fk.from.alias:r.fk.from.table) + "!" + r.fk.from.column + "!" + (r.fk.to.alias?r.fk.to.alias:r.fk.to.table) + "!" + r.fk.to.column;
+                    return (r.fk.from.alias ? r.fk.from.alias : r.fk.from.table) + "!" + r.fk.from.column + "!" + (r.fk.to.alias ? r.fk.to.alias : r.fk.to.table) + "!" + r.fk.to.column;
                 } else {
                     return r.from.table + "!" + r.from.column + "!" + r.to.table + "!" + r.to.column;
                 }
@@ -734,23 +734,20 @@
                         type: "rect",
                         table: k,
                         draw: function (layers, physmodel) {
-                            this.super.draw(layers, physmodel);
-                            let ox=model[this.table]["coords___"].x;
-                            let oy=model[this.table]["coords___"].y;
-                            let tx=this.x;
-                            let ty=this.y;
+                            let ox = model[this.table]["coords___"].x;
+                            let oy = model[this.table]["coords___"].y;
+                            let tx = this.x;
+                            let ty = this.y;
 
-                            if (ontablemove!==undefined && !(ox==tx && oy==ty)) {
+                            if (ontablemove !== undefined && !(ox == tx && oy == ty)) {
                                 ontablemove({
-                                    table:this.table, ox,oy,tx,ty
+                                    table: this.table, ox, oy, tx, ty
                                 })
                             }
-                            model[this.table]["coords___"].x= tx;
+                            model[this.table]["coords___"].x = tx;
                             model[this.table]["coords___"].y = ty;
                             layers[4].push((ctx) => {
-                                ctx.beginPath();
                                 renderTable(ctx, this.table);
-                                ctx.stroke();
                             });
                         }
                     };
@@ -786,7 +783,7 @@
                 for (let i = 0; i < phys.model.length; i++) {
                     if (phys.model[i].alias === k) {
                         alias = phys.model[i];
-                        indexes[k]=i;
+                        indexes[k] = i;
                         break;
                     }
                 }
@@ -796,17 +793,14 @@
                         alias: k,
                         draw: function (layers, physmodel) {
                             selectionModel.clear(null);
-                            this.super.draw(layers, physmodel);
                             aliases[this.alias]["coords___"].x = this.x;
                             aliases[this.alias]["coords___"].y = this.y;
                             layers[4].push((ctx) => {
-                                ctx.beginPath();
                                 renderTable(ctx, aliases[this.alias].table, this.alias)
-                                ctx.stroke();
                             });
                         }
                     };
-                    indexes[k]=phys.model.length;
+                    indexes[k] = phys.model.length;
                     phys.model.push(alias);
                 }
                 alias.x = aliases[k]["coords___"].x;
@@ -842,7 +836,7 @@
                 let th = tablehash(link);
                 link.count = counts[th] || 0;
                 counts[th] = link.count + 1;
-                if (counts[th]>3) debugger;
+                if (counts[th] > 3) debugger;
                 link.draw = function (layers, physmodel) {
                     layers[5].push((ctx) => {
                         renderFK(ctx, fks[i].from.table, fks[i].from.column,
@@ -876,27 +870,26 @@
                             }
                         }
                         if ("alias" in aliases[alias].toFK[i]) {
-                            fk.to.alias=aliases[alias].toFK[i].alias;
+                            fk.to.alias = aliases[alias].toFK[i].alias;
                         }
-                        let h=hash({type:"link",fk});
+                        let h = hash({ type: "link", fk });
                         let link;
                         if (h in links) {
-                            link=links[h]; // reuse existing link
+                            link = links[h]; // reuse existing link
                         } else {
-                            link={
-                                type:'link',
-                                fromborder:true,
-                                toborder:true
+                            link = {
+                                type: 'link',
+                                fromborder: true,
+                                toborder: true
                             }
                         }
                         phys.model.push(link);
-                        link.from = indexes[fk.from.alias||fk.from.table];
-                        link.to = indexes[fk.to.alias||fk.to.table];
-                        link.fk=fk;
-                        let icount=count;
-                        link.draw=function(layers,physmodel) {
-                            layers[5].push((ctx)=>{
-                                ctx.save();
+                        link.from = indexes[fk.from.alias || fk.from.table];
+                        link.to = indexes[fk.to.alias || fk.to.table];
+                        link.fk = fk;
+                        let icount = count;
+                        link.draw = function (layers, physmodel) {
+                            layers[5].push((ctx) => {
                                 ctx.beginPath();
                                 let hotspot = {
                                     table: fk.from.table,
@@ -904,9 +897,8 @@
                                     column: fk.from.column,
                                     fk: fk.to
                                 };
-                                renderFKTableAlias(ctx,aliases[alias], fk.from.column, toTarget(aliases[alias].toFK[i]), aliases[alias].toFK[i].fkcolumn, hotspot, total, icount);
+                                renderFKTableAlias(ctx, aliases[alias], fk.from.column, toTarget(aliases[alias].toFK[i]), aliases[alias].toFK[i].fkcolumn, hotspot, total, icount);
                                 ctx.stroke();
-                                ctx.restore();                
                             })
                         }
                         count++;
@@ -922,42 +914,40 @@
                             },
                             to: {
                                 table: aliases[alias].table,
-                                alias:alias,
+                                alias: alias,
                                 column: aliases[alias].fromFK[i].column
                             }
                         }
                         if ("alias" in aliases[alias].fromFK[i]) {
-                            fk.from.alias=aliases[alias].fromFK[i].alias;
+                            fk.from.alias = aliases[alias].fromFK[i].alias;
                         }
-                        let h=hash({type:"link",fk});
+                        let h = hash({ type: "link", fk });
                         let link;
                         if (h in links) {
-                            link=links[h]; // reuse existing link
+                            link = links[h]; // reuse existing link
                         } else {
-                            link={
-                                type:'link',
-                                fromborder:true,
-                                toborder:true
+                            link = {
+                                type: 'link',
+                                fromborder: true,
+                                toborder: true
                             }
                         }
                         phys.model.push(link);
-                        link.from = indexes[fk.from.alias||fk.from.table];
-                        link.to = indexes[fk.to.alias||fk.to.table];
-                        link.fk=fk.fk;
-                        let icount=count;
-                        link.draw=function(layers,physmodel) {
-                            layers[5].push((ctx)=>{
-                                ctx.save();
+                        link.from = indexes[fk.from.alias || fk.from.table];
+                        link.to = indexes[fk.to.alias || fk.to.table];
+                        link.fk = fk.fk;
+                        let icount = count;
+                        link.draw = function (layers, physmodel) {
+                            layers[5].push((ctx) => {
                                 ctx.beginPath();
                                 let hotspot = {
                                     table: fk.from.table,
                                     column: fk.from.column,
                                     fk: fk.to
                                 };
-                                if ("alias" in fk.from) hotspot.alias=fk.from.alias;
-                                renderFKTableAlias(ctx,toTarget(aliases[alias].fromFK[i]), fk.from.column, aliases[alias], fk.to.column, hotspot, total, icount);
+                                if ("alias" in fk.from) hotspot.alias = fk.from.alias;
+                                renderFKTableAlias(ctx, toTarget(aliases[alias].fromFK[i]), fk.from.column, aliases[alias], fk.to.column, hotspot, total, icount);
                                 ctx.stroke();
-                                ctx.restore();                
                             })
                         }
                         count++;

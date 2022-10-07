@@ -56,6 +56,8 @@
             config.timeLimit = TIMELIMIT;
             const FONT = config.font || "15px Arial";
             config.font = FONT;
+            const ZOOMABLE = config.zoomable || true;
+            config.zoomable=ZOOMABLE;
 
             let context;
             const animations = [];
@@ -650,22 +652,24 @@
 
             let zoom = 1.0;
             root.style.zoom = (zoom * 100) + "%";
-            root.addEventListener('wheel', function (event) {
-                if (event.ctrlKey !== true) return;
-                event.preventDefault();
-                if (event.deltaY > 0) {
-                    zoom = zoom / 1.1;
-                    if (zoom > 0.98 && zoom < 1.02) zoom = 1.0; // resets floating point approximations
-                    root.style.zoom = (zoom * 100) + "%";
-                    resize();
-                }
-                if (event.deltaY < 0) {
-                    zoom = zoom * 1.1;
-                    if (zoom > 0.98 && zoom < 1.02) zoom = 1.0; // resets floating point approximations
-                    root.style.zoom = (zoom * 100) + "%";
-                    resize();
-                }
-            });
+            if (ZOOMABLE) {
+                root.addEventListener('wheel', function (event) {
+                    if (event.ctrlKey !== true) return;
+                    event.preventDefault();
+                    if (event.deltaY > 0) {
+                        zoom = zoom / 1.1;
+                        if (zoom > 0.98 && zoom < 1.02) zoom = 1.0; // resets floating point approximations
+                        root.style.zoom = (zoom * 100) + "%";
+                        resize();
+                    }
+                    if (event.deltaY < 0) {
+                        zoom = zoom * 1.1;
+                        if (zoom > 0.98 && zoom < 1.02) zoom = 1.0; // resets floating point approximations
+                        root.style.zoom = (zoom * 100) + "%";
+                        resize();
+                    }
+                });    
+            }
 
             // manage events
 
