@@ -147,11 +147,16 @@
             let pos = getPos(event);
             let tgt = getTarget(pos);
             if (drawingFK!=null) {
-                delete tgt.coords;
-                selectionModel.fk({table:drawingFK.table, column:drawingFK.column},tgt,event,pos);
-                drawingFK=null;
+                if (tgt!=null) {
+                    delete tgt.coords;
+                    selectionModel.fk({table:drawingFK.table, column:drawingFK.column},tgt,event,pos);    
+                    drawingFK=null;
+                } else {
+                    drawingFK=null;
+                    phys.repaint();
+                }
                 window.addEventListener('click', captureClick, true);
-            } else {
+        } else {
                 if (tgt == null) {
                     selectionModel.clear(event);
                 } else if (event.which != 1) {

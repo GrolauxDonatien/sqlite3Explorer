@@ -36,7 +36,7 @@
             config.weight = WEIGHT;
             const WEIGHT2 = WEIGHT * WEIGHT;
             // friction prevents movement below a threshold
-            const FRICTION = config.friction || 0.2;
+            const FRICTION = config.friction || 0.1;
             config.friction = FRICTION;
             const FRICTION2 = FRICTION * FRICTION;
             // when rectangles overlap, the repulsion is based on dots in the rectangles, which are placed at this distance apart
@@ -419,7 +419,6 @@
                             let f = (ATTRACTIONFORCE * elapsed * (d - WEIGHT / elapsed)) / d;
                             if (f > 0) {
                                 assertLink(e1);
-                                //                        if (state=="NONE") console.log(`attracting ${e1._from},${e1._to}:${f * (n2.x - n1.x)},${f * (n2.y - n1.y)}-${f * (n1.x - n2.x)},${f * (n1.y - n2.y)}`);
                                 if (e1._from == -1) {
                                     return;
                                 }

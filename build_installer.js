@@ -26,14 +26,13 @@ function setConstant(fn,constant,value) {
             while(idx<source.length && (source[idx]==" " || source[idx]=="\n")) idx++;
             let start=idx;
             while(idx<source.length && (source[idx]!=";" && source[idx]!="\n")) idx++;
-            source=source.substring(0,start)+value+source.substring(idx);
-            fs.writeFileSync(fn,source);
+            fs.writeFileSync(fn,source.substring(0,start)+value+source.substring(idx));
         }
-    }
+    } 
 }
 
-setConstant('editor-app/backend/main.js',"DEBUG","false");
 setConstant('editor-app/backend/main.js',"VERSION",'"'+versions+'"');
+setConstant('editor-app/backend/main.js',"DEBUG","false");
 
 console.log("Creating version "+versions);
 
