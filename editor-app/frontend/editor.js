@@ -46,6 +46,8 @@ $.SQLEditor = {};
         contextOverlay.removeAttr("contenteditable");
         contextOverlay.removeAttr('data-table');
         contextOverlay.removeAttr('data-column');
+        contextOverlay.removeAttr('data-clientx');
+        contextOverlay.removeAttr('data-clienty');
         contextOverlay.off('keydown');
     }
 
@@ -58,18 +60,33 @@ $.SQLEditor = {};
         });
     }
 
+    function toNumber(s) {
+        return parseFloat(s.substring(0,s.length-2))
+    }
+
     function ontablemove(event) {
-        function toInt(s) {
-            return parseFloat(s.substring(0,s.length-2))
-        }
         let table=contextOverlay.attr('data-table');
         if (event.table==table) {
             contextOverlay.css({
-                left:toInt(contextOverlay.css('left'))+event.tx-event.ox,
-                top:toInt(contextOverlay.css('top'))+event.ty-event.oy,
+                left:toNumber(contextOverlay.css('left'))+event.tx-event.ox,
+                top:toNumber(contextOverlay.css('top'))+event.ty-event.oy,
             })
         }
     }
+
+    function ontablescroll() {
+        let table=contextOverlay.attr('data-table');
+        if (table) {
+            let r = contextOverlay.parent().find('canvas')[0].getBoundingClientRect();
+            contextOverlay.css({
+                left:toNumber(contextOverlay.css('left'))+r.x-parseFloat(contextOverlay.attr('data-clientx')),
+                top:toNumber(contextOverlay.css('top'))+r.y-parseFloat(contextOverlay.attr('data-clienty'))
+            })
+            contextOverlay.attr('data-clientx',r.x);
+            contextOverlay.attr('data-clienty',r.y);
+        }
+    }
+
 
     function setMenu(menu) {
         conf.root.append(contextOverlay);
@@ -340,6 +357,8 @@ $.SQLEditor = {};
                             height: conf.schemaUI.textHeight
                         });
                         contextOverlay.attr('data-table', target.table);
+                        contextOverlay.attr('data-clientx',r.x);
+                        contextOverlay.attr('data-clienty',r.y);
                         setEditName(target.table, (rename) => {
                             try {
                                 ucc.diff(
@@ -768,6 +787,7 @@ $.SQLEditor = {};
         });
         conf.root = el;
         conf.schemaUI = schemaUI;
+        el.on('scroll',ontablescroll);
     }
     $.SQLEditor.message = message;
     $.SQLEditor.error = error;

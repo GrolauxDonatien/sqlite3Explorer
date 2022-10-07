@@ -113,6 +113,10 @@
             }
         });
 
+        phys.addEventListener("dragStop", function(event) {
+            resizeCanvas();
+        });
+
         phys.addEventListener("afterPaint", function() {
             if (drawingFK!=null) {
                 drawingFK.ctx.beginPath();

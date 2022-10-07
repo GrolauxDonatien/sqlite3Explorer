@@ -679,7 +679,8 @@
                 "stopPaint": [],
                 "beforePaint": [],
                 "afterPaint": [],
-                "dragStart": []
+                "dragStart": [],
+                "dragStop": []
             };
 
             function addEventListener(event, fn) {
@@ -855,6 +856,7 @@
                         // coming from a drag, we must kill the click event that follows
                         window.addEventListener('click', captureClick, true);
                         bringIntoView();
+                        triggerEvent("dragStop",event)
                     // then we can leak into the next case which reset the state machine
                     case "MAYBE":
                         ot.lock = false;

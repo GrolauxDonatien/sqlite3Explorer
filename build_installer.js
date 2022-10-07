@@ -12,7 +12,6 @@ versions.pop();
 versions.push(last+1);
 versions=versions.join(".");
 packages.version=versions;
-fs.writeFileSync("package.json",JSON.stringify(packages,null,4));
 
 // turn off debug
 
@@ -36,7 +35,7 @@ function setConstant(fn,constant,value) {
 setConstant('editor-app/backend/main.js',"DEBUG","false");
 setConstant('editor-app/backend/main.js',"VERSION",'"'+versions+'"');
 
-console.log("Creatin version "+versions);
+console.log("Creating version "+versions);
 
 const APP_NAME = "SQLite3_Explorer"
 const APP_DIR = path.resolve(__dirname, './' + APP_NAME + '-win32-x64');
@@ -94,8 +93,14 @@ if (BUILDMSI) {
                 }
             }
             console.log("MSI is ready");
+            done();
         });
     });
-
+} else {
+    done();
 }
 
+function done() {
+    // only write back the new version number after finishing, to avoid incrementing on cancelled builds
+    fs.writeFileSync("package.json",JSON.stringify(packages,null,4));
+}
