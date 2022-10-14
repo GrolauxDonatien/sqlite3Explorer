@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 
-const DEBUG = true;
+const DEBUG = false;
 const APP = __dirname + "/../frontend/editor.html";
 const QUERY = __dirname + "/../frontend/query.html";
 const CONSOLE = __dirname + "/../frontend/console.html";
@@ -8,10 +8,13 @@ const EDITTABLE = __dirname + "/../frontend/table.html";
 const sqlite3 = require("../../common-backend/bettersqlite3adapter");
 const fs = require('fs');
 const fspath = require('path');
-const { exception } = require('console');
-const { open } = require('inspector');
 const LIMIT = 1000;
-const VERSION = "1.0.19";
+const VERSION = "1.0.20";
+const os = require('os');
+
+const isMac = os.platform() === "darwin";
+const isWindows = os.platform() === "win32";
+const isLinux = os.platform() === "linux";
 
 let db = null;
 let win;
@@ -519,6 +522,7 @@ ipcMain.on('asynchronous-message', (event, arg) => {
                 event.sender.send("main", arg);
                 break;
             case "menu":
+                if (isMac) break; // dynamic menus don't work on Mac
                 function findMenu(list, submenu) {
                     if (list.length == 0) return submenu;
                     for (let j = 0; j < submenu.items.length; j++) {

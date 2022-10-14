@@ -189,11 +189,19 @@ ipcAjax.callbacks.import = ({ file }) => {
 }
 
 ipcAjax.callbacks.resync = () => {
-    sync(conf.file);
+    if (conf.file!=null) {
+        sync(conf.file);
+    } else {
+        alertNoFile();
+    }
 }
 
 ipcAjax.callbacks.sync = ({ file }) => {
-    sync(file);
+    if (conf.file!=null) {
+        sync(file);
+    } else {
+        alertNoFile();
+    }
 }
 
 ipcAjax.callbacks.load = ({ data, file }) => {
@@ -228,6 +236,10 @@ function save(file) {
         document.title = "SQLite3 Explorer - " + file;
         ipcAjax({ action: "menu", menu: ["File", "Save"], enabled: true });
     });
+}
+
+function alertNoFile() {
+    alert("You need to import a Database first.");
 }
 
 ipcAjax.callbacks.saveas = ({ file }) => {
@@ -291,6 +303,8 @@ ipcAjax.callbacks.querywindow = () => {
         ipcAjax({
             action: "querywindow", "file": conf.file
         });
+    } else {
+        alertNoFile();
     }
 };
 
@@ -299,6 +313,8 @@ ipcAjax.callbacks.consolewindow = () => {
         ipcAjax({
             action: "consolewindow", "file": conf.file
         });
+    } else {
+        alertNoFile();
     }
 };
 
@@ -337,6 +353,10 @@ ipcAjax.callbacks.initiatePrint = () => {
 };
 
 ipcAjax.callbacks.initiateEditTables = () => {
+    if (conf.file==null) {
+        alertNoFile();
+        return;
+    }
     ipcAjax({ action: "getSchema", conf }, (response) => {
         let tables = Object.keys(response.schema);
         if (tables.length == 0) {

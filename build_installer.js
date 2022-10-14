@@ -31,12 +31,12 @@ function setConstant(fn,constant,value) {
     } 
 }
 
-setConstant('editor-app/backend/main.js',"VERSION",'"'+versions+'"');
-setConstant('editor-app/backend/main.js',"DEBUG","false");
+setConstant(packages.main,"VERSION",'"'+versions+'"');
+setConstant(packages.main,"DEBUG","false");
 
 console.log("Creating version "+versions);
 
-const APP_NAME = "SQLite3_Explorer"
+const APP_NAME = packages.productName||packages.name;
 const APP_DIR = path.resolve(__dirname, './' + APP_NAME + '-win32-x64');
 const OUT_DIR = path.resolve(__dirname, './windows_installer');
 const APP_ICON = path.resolve(__dirname, './icon.ico');
