@@ -59,6 +59,26 @@ const electron = require('electron');
         }
     });
 
+    // fix for alert and confirm not allowing focus on DOM elements afterwards
+    let realAlert=window.alert;
+    let realConfirm=window.confirm;
+    const remote = require('@electron/remote')
+
+    window.alert=function() {
+        const win = remote.getCurrentWindow();
+        realAlert.apply(this,arguments);        
+        win.blur();
+        win.focus();
+    }
+
+    window.confirm=function() {
+        debugger;
+        const win = remote.getCurrentWindow();
+        let ret=realConfirm.apply(this,arguments);        
+        win.blur();
+        win.focus();
+        return ret;
+    }
 
     if (window) window.ipcAjax = ipcAjax;
     if (module) module.exports = ipcAjax;

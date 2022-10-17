@@ -197,11 +197,7 @@ ipcAjax.callbacks.resync = () => {
 }
 
 ipcAjax.callbacks.sync = ({ file }) => {
-    if (conf.file!=null) {
-        sync(file);
-    } else {
-        alertNoFile();
-    }
+    sync(file);
 }
 
 ipcAjax.callbacks.load = ({ data, file }) => {

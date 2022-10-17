@@ -10,6 +10,7 @@
         "rebuild": "electron-rebuild -w better-sqlite3"
     },
     "dependencies": {
+        "@electron/remote": "^2.0.8",
         "better-sqlite3": "^7.5.1",
         "electron": "^18.3.12",
         "electron-squirrel-startup": "^1.0.0",

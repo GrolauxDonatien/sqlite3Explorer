@@ -267,7 +267,7 @@ const editorMergeUtils = (() => {
             let idx = 0;
             for (let column in schema[table]) {
                 if (column == "coords___") continue;
-                if ("renamed" in schema[table][column]) {
+                if (schema[table][column].renamed!==undefined) {
                     if (colors[table][column].coords___ == setok) { // it's the other name that is now in use
                         list.push(["renameColumn", table, schema[table][column].renamed.name, column]);
                     }
@@ -865,7 +865,7 @@ const editorMergeUtils = (() => {
                     let coldef1 = coldef(schema[table][column1]);
                     for (let j = cols.length - 1; j > i; j--) {
                         let column2 = cols[j];
-                        if (colors[table][column2].coords___ == REMOTEUNSET && coldef1 == coldef(schema[table][column2])) { // src for rename of column
+                        if (colors[table][column2].coords___ == REMOTEUNSET) { // src for rename of column
                             let diff = levenshtein(column1, column2); // we'll assume that the renaming does not change everything most of the time
                             if (diff < bestscore) {
                                 bestscore = diff;

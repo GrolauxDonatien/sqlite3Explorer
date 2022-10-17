@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 
-const DEBUG = false;
+const DEBUG = true;
 const APP = __dirname + "/../frontend/editor.html";
 const QUERY = __dirname + "/../frontend/query.html";
 const CONSOLE = __dirname + "/../frontend/console.html";
@@ -11,6 +11,7 @@ const fspath = require('path');
 const LIMIT = 1000;
 const VERSION = "1.0.20";
 const os = require('os');
+require('@electron/remote/main').initialize()
 
 const isMac = os.platform() === "darwin";
 const isWindows = os.platform() === "win32";
@@ -227,7 +228,7 @@ function createWindow() {
             enableRemoteModule: true
         }
     })
-
+    require("@electron/remote/main").enable(win.webContents);
     win.loadFile(APP);
     if (DEBUG) win.webContents.openDevTools()
     return win;
@@ -246,6 +247,7 @@ function openNewQueryWindow(conf) {
             enableRemoteModule: true
         }
     })
+    require("@electron/remote/main").enable(win.webContents);
     win.removeMenu();
     win.loadFile(QUERY, { query: conf });
     if (DEBUG) win.webContents.openDevTools()
@@ -265,6 +267,7 @@ function openNewConsoleWindow(conf) {
             enableRemoteModule: true
         }
     })
+    require("@electron/remote/main").enable(win.webContents);
     win.removeMenu();
     win.loadFile(CONSOLE, { query: conf });
     if (DEBUG) win.webContents.openDevTools()
@@ -284,6 +287,7 @@ function openNewEditTable(conf) {
             enableRemoteModule: true
         }
     })
+    require("@electron/remote/main").enable(win.webContents);
     win.removeMenu();
     win.loadFile(EDITTABLE, { query: conf });
     if (DEBUG) win.webContents.openDevTools()
