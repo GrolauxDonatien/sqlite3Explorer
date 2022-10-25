@@ -407,7 +407,6 @@
                         }
                     default:
                         warnings.push("Unknown type " + what.type + " for " + JSON.stringify(what));
-                        debugger;
                 }
             }
 

@@ -836,7 +836,6 @@
                 let th = tablehash(link);
                 link.count = counts[th] || 0;
                 counts[th] = link.count + 1;
-                if (counts[th] > 3) debugger;
                 link.draw = function (layers, physmodel) {
                     layers[5].push((ctx) => {
                         renderFK(ctx, fks[i].from.table, fks[i].from.column,

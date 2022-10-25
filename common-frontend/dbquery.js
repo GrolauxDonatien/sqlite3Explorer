@@ -1773,7 +1773,6 @@
                 }
                 syncTimer = setTimeout(function () {
                     syncTimer = null;
-                    debugger;
                     error.css('display', 'none');
                     if (syncModelToText) {
                         try {

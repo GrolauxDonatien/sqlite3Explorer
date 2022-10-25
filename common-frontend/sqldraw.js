@@ -119,7 +119,6 @@
                             for (let i = 0; i < col.conditions.length; i++) {
                                 let group = col.conditions[i].cond.group;
                                 let k = (group === undefined ? '' : group.colors.join('/'));
-                                if (k == "name") debugger;
                                 if (!(k in groups)) groups[k] = [];
                                 groups[k].push(col.conditions[i]);
                             }
@@ -389,7 +388,6 @@
                                 path,
                                 container: r,
                                 coords() {
-                                    debugger;
                                 }
                             }
                         }

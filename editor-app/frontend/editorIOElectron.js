@@ -72,7 +72,6 @@ const electron = require('electron');
     }
 
     window.confirm=function() {
-        debugger;
         const win = remote.getCurrentWindow();
         let ret=realConfirm.apply(this,arguments);        
         win.blur();

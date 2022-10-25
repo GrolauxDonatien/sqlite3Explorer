@@ -295,7 +295,6 @@ let parsers = (function () {
                 if (tree == "*") {
                     input[key] = { type: "Identifier", name: _ASTERISKS_ };
                 } else {
-                    debugger;
                     throw new Error(tree.type + " is not supported");
                 }
         }
@@ -427,7 +426,6 @@ let parsers = (function () {
                 case "SoundsLikePredicate":                // TODO
                 default:
                     if (tree != "*") {
-                        debugger;
                         throw new Error(tree.type + " is not supported");
                     }
             }
@@ -514,7 +512,6 @@ let parsers = (function () {
                     loop(what.right);
                     break;
                 default:
-                    debugger;
                     throw new Error("Cannot process from");
             }
         }

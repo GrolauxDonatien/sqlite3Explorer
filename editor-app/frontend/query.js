@@ -332,7 +332,6 @@ function setInTab(tab) {
                 conf.builder.refresh();
             } catch (e) {
                 console.log(e);
-                debugger;
                 // ignore
             }
             break;

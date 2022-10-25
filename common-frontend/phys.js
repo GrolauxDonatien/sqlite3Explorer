@@ -618,7 +618,6 @@
                     }
                 },
                 set(obj, prop, value) {
-                    debugger;
                 }
             });
 
