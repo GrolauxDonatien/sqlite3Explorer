@@ -35,7 +35,14 @@
         }
     }
 
-    function createDBViewer({ model, aliases: aliases, root, events, checkboxes, radios, colors, selectionModel, ontablemove }) {
+    function isEmpty(obj) {
+        for(let k in obj) {
+            return false;
+        }
+        return true;
+    }
+
+    function createDBViewer({ model, aliases: aliases, root, events, checkboxes, radios, colors, selectionModel, ontablemove, emptymessage="" }) {
 
         selectionModel.clear();
         if (checkboxes === undefined) checkboxes = false;
@@ -64,6 +71,15 @@
 
         let hotspots = [];
 
+        function physRepaint() {
+            if (isEmpty(model)) {
+                ctx.fillStyle="black";
+                ctx.fillText(emptymessage,50,50);
+            } else {
+                phys.repaint();
+            }
+        }
+
         function getTarget(c) {
             for (let i = hotspots.length - 1; i >= 0; i--) {
                 if (isInside(hotspots[i].coords, c.x, c.y)) {
@@ -84,7 +100,11 @@
             }
             let tgt = $.extend({}, getTarget(pos));
             delete tgt.coords;
-            selectionModel.select(tgt, event, pos);
+            if (isEmpty(tgt)) {
+                selectionModel.clear(event, pos);
+            } else {
+                selectionModel.select(tgt, event, pos);
+            }
         }
 
         /*
@@ -153,7 +173,7 @@
                     drawingFK = null;
                 } else {
                     drawingFK = null;
-                    phys.repaint();
+                    physRepaint();
                 }
                 window.addEventListener('click', captureClick, true);
             } else {
@@ -433,7 +453,7 @@
             ctx.fillStyle = defcolor;
             ctx.rect(c.x, c.y, c.width, c.height);
             ctx.moveTo(c.x, c.y + textHeight + 6);
-            ctx.lineTo(c.x+c.width, c.y + textHeight + 6)
+            ctx.lineTo(c.x + c.width, c.y + textHeight + 6)
 
             if (checkboxes) {
                 ctx.rect(c.x + 2 + CHECKPADX, c.y + 2 + CHECKPADY, CHECKBOXSIZE - 4, CHECKBOXSIZE - 4);
@@ -655,7 +675,7 @@
             ctx.width = canvas.width();
             ctx.height = canvas.height();
             ctx.font = "14px Arial";
-            phys.repaint();
+            physRepaint();
         }
 
         // wait to get a correct measurement on the canvas before adding elements to phys
@@ -953,9 +973,11 @@
                     }
                 }
             }
-            phys.repaint();
+            physRepaint();
             resizeCanvas();
         }
+
+        setTimeout(physRepaint,100);
 
         return {
             redraw: function () {
