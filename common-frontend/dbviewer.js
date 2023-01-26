@@ -42,7 +42,7 @@
         return true;
     }
 
-    function createDBViewer({ model, aliases: aliases, root, events, checkboxes, radios, colors, selectionModel, ontablemove, emptymessage="" }) {
+    function createDBViewer({ model, aliases: aliases, root, events, checkboxes, radios, colors, selectionModel, ontablemove, emptymessage="", ondrawn }) {
 
         selectionModel.clear();
         if (checkboxes === undefined) checkboxes = false;
@@ -106,16 +106,6 @@
                 selectionModel.select(tgt, event, pos);
             }
         }
-
-        /*
-
-        TODO : if (radios) then there is a need to manage the FK tracing between two tables
-        part of the code is here
-        but it also involves help from phys : 
-            add dragstart event
-            if trigger function returns false then phys cancels its own table dragging mechanism
-            + with mousemove and mouseup, should be able to achieve it
-        */
 
         drawingFK = null;
 
@@ -676,6 +666,10 @@
             ctx.height = canvas.height();
             ctx.font = "14px Arial";
             physRepaint();
+            if (ondrawn) {
+                ondrawn();
+                ondrawn=undefined;
+            }
         }
 
         // wait to get a correct measurement on the canvas before adding elements to phys
