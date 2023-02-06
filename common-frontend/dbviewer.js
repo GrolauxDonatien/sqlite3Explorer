@@ -237,10 +237,10 @@
                 counts[table] = [];
             }
             function tryPush(tablein, tableout) {
-                if (counts[tablein].indexOf(tableout) == -1) {
+                if (counts[tablein] && counts[tablein].indexOf(tableout) == -1) {
                     counts[tablein].push(tableout);
                 }
-                if (counts[tableout].indexOf(tablein) == -1) {
+                if (counts[tableout] && counts[tableout].indexOf(tablein) == -1) {
                     counts[tableout].push(tablein);
                 }
             }
@@ -843,18 +843,20 @@
                         toborder: true
                     }
                 }
-                phys.model.push(link);
                 link.from = indexes[fks[i].from.table];
                 link.to = indexes[fks[i].to.table];
-                link.fk = fks[i];
-                let th = tablehash(link);
-                link.count = counts[th] || 0;
-                counts[th] = link.count + 1;
-                link.draw = function (layers, physmodel) {
-                    layers[5].push((ctx) => {
-                        renderFK(ctx, fks[i].from.table, fks[i].from.column,
-                            fks[i].to, counts[th], link.count);
-                    });
+                if (link.to!==undefined) {
+                    phys.model.push(link);
+                    link.fk = fks[i];
+                    let th = tablehash(link);
+                    link.count = counts[th] || 0;
+                    counts[th] = link.count + 1;
+                    link.draw = function (layers, physmodel) {
+                        layers[5].push((ctx) => {
+                            renderFK(ctx, fks[i].from.table, fks[i].from.column,
+                                fks[i].to, counts[th], link.count);
+                        });
+                    }    
                 }
             }
 

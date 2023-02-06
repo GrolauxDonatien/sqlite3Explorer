@@ -142,6 +142,7 @@ async function connect(conf) {
                     let rows = stmt.all();
                     for (let i = 0; i < rows.length; i++) {
                         let row = rows[i];
+                        
                         tables[k][row.from].fk = {
                             table: row.table,
                             column: row.to
