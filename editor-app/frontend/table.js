@@ -491,6 +491,7 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
     let acceptedDateTimeCharacters = new Date('4567-01-23T12:34:56').toLocaleString() + "089";
     if (acceptedDateTimeCharacters.indexOf("PM") != -1) acceptedDateTimeCharacters += "A";
     data.on('keydown', 'td[contenteditable="true"]', (event) => {
+        if (event.ctrlKey || event.altKey) return;
         let el, col, row, caret, tgt, text, idx;
         switch (event.key) {
             case "ArrowDown":

@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 
-const DEBUG = false;
+const DEBUG = true;
 const APP = __dirname + "/../frontend/editor.html";
 const QUERY = __dirname + "/../frontend/query.html";
 const CONSOLE = __dirname + "/../frontend/console.html";
