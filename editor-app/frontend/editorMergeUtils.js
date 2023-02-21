@@ -245,6 +245,7 @@ const editorMergeUtils = (() => {
 
     function diffToActions(schema, colors, setok, setko, conflict) {
         const list = [];
+        const todelete = {};
         for (let table in schema) {
             if ("renamed" in schema[table].coords___) {
                 if (colors[table].coords___ == setok) { // rename other name to this table
@@ -261,7 +262,13 @@ const editorMergeUtils = (() => {
             } else if (colors[table].coords___ == setok || colors[table].coords___ == conflict) {
                 list.push(["createTable", table, schema[table].coords___.x, schema[table].coords___.y]);
             } else if (colors[table].coords___ == setko) {
-                list.push(["deleteTable", table]);
+                todelete[table]={}
+                for(let c in schema[table]) {
+                    if (c=="coords___") continue;
+                    if ("fk" in schema[table][c]) {
+                        todelete[table][schema[table][c].fk.table]=true;
+                    }
+                }
                 continue; // do not process columns of deleted table
             }
             let idx = 0;
@@ -309,6 +316,32 @@ const editorMergeUtils = (() => {
                     list.push(["deleteFK", table, column]);
                     list.push(["createFK", table, column, schema[table][column].fk.table, schema[table][column].fk.column]);
                 }
+            }
+        }
+        let touched=true;
+        let deleted={};
+        while(touched && Object.keys(todelete).length>0) { // as long as we keep on deleting tables & there are tables still to be deleted
+            touched=false; // mark as no deletion so far
+            for(let table in todelete) {
+                let ok=true;
+                for(let d in todelete[table]) {
+                    if (d in todelete && !(d in deleted)) {
+                        ok=false;
+                        break;
+                    }
+                } // if all dependents of table are already deleted
+                if (ok) {
+                    list.push(["deleteTable", table]); // delete table
+                    deleted[table]=true; // add to deleted
+                    delete todelete[table]; // remove from todelete
+                    touched=true; // mark as we deleted something
+                }
+            }    
+        }
+        if (!touched && Object.keys(todelete).length>0) { // there are still tables needing deletion, but we cannot delete them because of dependencies
+            // this could happen with circular FK betwenn two tables for example
+            for(let table in todelete) { // we just give up and mark them to be deleted anyway
+                list.push(["deleteTable", table]);
             }
         }
         return list;
@@ -478,6 +511,7 @@ const editorMergeUtils = (() => {
                             } else {
                                 sql.push(`DROP TABLE ${table};`);
                                 needsDelete = true;
+                                needsRecreate = false;
                                 if (table in newTables) {
                                     delete newTables[table];
                                 } else {
@@ -613,6 +647,10 @@ const editorMergeUtils = (() => {
             let recreating = false;
             for (let table in oldTables) {
                 if (oldTables[table].needsRecreate) {
+                    if (oldTables[table].needsDelete) {
+                        oldTables[table].needsRecreate=false;
+                        continue;
+                    }
                     if (!recreating) {
                         recreating = true;
                         str.push(`PRAGMA foreign_keys = OFF;
