@@ -4,7 +4,7 @@ sqlite3 Explorer is a simple graphical editor for sqlite3 databases. The visual 
 
 ![sqlite3 Explorer screenshot](https://github.com/GrolauxDonatien/sqlite3Explorer/blob/main/screenshot.png?raw=true)
 
-The main window is a schema editor. Right-click brings a context menu to add, edit, or delete relevant items. Creating a foreign key is achieved by dragging from the circle is front of the column.
+The main window is a schema editor. Right-click brings a context menu to add, edit, or delete relevant items. Creating a foreign key is achieved by dragging from the circle in front of the column.
 
 The edited schema is, in fact, independent of any actual database. For example, it can be incomplete and a table may not have any column definition yet. Also, there is no data associated to the schema definition. The `File` menu works on the schema level, saving its definition in a file using a JSON notation. 
 
