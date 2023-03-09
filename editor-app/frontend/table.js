@@ -331,7 +331,7 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
                 for (let i = 0; i < fieldNames.length + 1; i++) {
                     if (i == 0) {
                         row.push(`<td><a class="save" title="Save All <CTRL+S>"><img src="data:image/png;base64,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"></a>&nbsp;<a class="cancel" title="Cancel edit <Escape>">&#x274C;</a>&nbsp;<a class="delete" title="Remove">&#x1F5D1;</a></td>`);
-                    } else if (fieldNames[i - 1] in pks) {
+                    } else if (tabledef[fieldNames[i - 1]].auto === true) {
                         row.push('<td></td>');
                     } else {
                         row.push('<td contenteditable="true"></td>');
@@ -451,7 +451,7 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
             if (i == 0) return;
             i = i - 1;
             let fieldName = fieldNames[i];
-            if (fieldName in pks) return;
+            if ((fieldName in pks) && pks[fieldName].auto===true) return;
             let el = $(e);
             let oldV = format(cache.formats[i].type, cache.formats[i].internalType, el.attr('data-value'));
             let newV = getText(el);
@@ -817,8 +817,7 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
                         if (tableIdx < minTableIdx) minTableIdx = tableIdx;
                         operations.push({
                             update: formatTuple($.extend(trToPK(tr), upd)),
-                            pks: Object.keys(pks)
-                        })
+                            pks: trToPK(tr)                        })
                     }
                 }
             })

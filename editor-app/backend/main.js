@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 
-const DEBUG = false;
+const DEBUG = true;
 const APP = __dirname + "/../frontend/editor.html";
 const QUERY = __dirname + "/../frontend/query.html";
 const CONSOLE = __dirname + "/../frontend/console.html";
@@ -9,7 +9,7 @@ const sqlite3 = require("../../common-backend/bettersqlite3adapter");
 const fs = require('fs');
 const fspath = require('path');
 const LIMIT = 1000;
-const VERSION = "1.0.27";
+const VERSION = "1.0.28";
 const os = require('os');
 require('@electron/remote/main').initialize()
 
@@ -26,7 +26,7 @@ const template = [
         label: 'File',
         submenu: [
             {
-                label: 'New...',
+                label: 'New...', 
                 click() {
                     const options = {
                         type: 'question',
@@ -771,21 +771,21 @@ ipcMain.on('asynchronous-message', (event, arg) => {
                                     let sep = "";
                                     let params = [];
                                     for (let k in op.update) {
-                                        if (op.pks.indexOf(k) == -1) {
                                             sql += sep + k + "=?"
                                             sep = ", ";
                                             params.push(op.update[k]);
-                                        }
                                     }
                                     let where = " WHERE ";
                                     let wparams = [];
                                     sep = "";
-                                    for (let k in op.update) {
-                                        if (op.pks.indexOf(k) != -1) {
-                                            where += sep + k + "=?"
-                                            sep = " AND ";
-                                            params.push(op.update[k]);
+                                    for (let k in op.pks) {
+                                        where += sep + k + "=?"
+                                        sep = " AND ";
+                                        params.push(op.pks[k]);
+                                        if (k in op.update) {
                                             wparams.push(op.update[k]);
+                                        } else {
+                                            wparams.push(op.pks[k]);
                                         }
                                     }
                                     try {
