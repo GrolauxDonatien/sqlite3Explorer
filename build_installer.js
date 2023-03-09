@@ -4,6 +4,8 @@ const { MSICreator } = require('electron-wix-msi');
 const path = require('path');
 const fs = require("fs");
 const child_process = require('child_process');
+const archiver = require('archiver');
+
 
 let packages=JSON.parse(fs.readFileSync("package.json"));
 let versions=packages.version.split(".");
@@ -34,6 +36,8 @@ function setConstant(fn,constant,value) {
 setConstant(packages.main,"VERSION",'"'+versions+'"');
 setConstant(packages.main,"DEBUG","false");
 
+
+
 console.log("Creating version "+versions);
 
 const APP_NAME = packages.productName||packages.name;
@@ -42,13 +46,21 @@ const OUT_DIR = path.resolve(__dirname, './windows_installer');
 const APP_ICON = path.resolve(__dirname, './icon.ico');
 const REPACKAGE = true;
 const BUILDMSI = true;
+const BUILDZIP = true;
 
 if (REPACKAGE) {
     // clear things up
     if (fs.existsSync(APP_DIR)) fs.rmSync(APP_DIR, { recursive: true, force: true });
     if (fs.existsSync(OUT_DIR)) fs.rmSync(OUT_DIR, { recursive: true, force: true });
-    console.log("Former build directories were deleted");
+    // remove .zip file
+    let files=fs.readdirSync(".");
+    for(let i=0; i<files.length; i++) {
+        if (files[i].startsWith("SQLite3_Explorer") && files[i].endsWith(".zip")) {
+            fs.rmSync(files[i]);
+        }
+    }
 
+    console.log("Former builds were deleted");
     child_process.execSync("electron-packager . --platform=win32 --arch=x64 --icon=" + APP_ICON + " " + APP_NAME);
     console.log("Stuff is packaged");
     // clean up packaged stuff to make installer much smaller
@@ -78,6 +90,27 @@ const msiCreator = new MSICreator({
         chooseDirectory: true
     },
 });
+
+if (BUILDZIP) {
+    let output = fs.createWriteStream(APP_NAME+"-"+versions+".zip");
+    var archive = archiver('zip');
+    
+    output.on('close', function () {
+        console.log(archive.pointer() + ' total bytes');
+        console.log('archiver has been finalized and the output file descriptor has closed.');
+    });
+    
+    archive.on('error', function(err){
+        throw err;
+    });
+    
+    archive.pipe(output);
+    
+    // append files from a sub-directory, putting its contents at the root of archive
+    archive.directory(APP_DIR, false);
+    
+    archive.finalize();
+}
 
 if (BUILDMSI) {
     // 4. Create a .wxs template file

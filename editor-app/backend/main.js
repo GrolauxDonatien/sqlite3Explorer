@@ -9,7 +9,7 @@ const sqlite3 = require("../../common-backend/bettersqlite3adapter");
 const fs = require('fs');
 const fspath = require('path');
 const LIMIT = 1000;
-const VERSION = "1.0.28";
+const VERSION = "1.0.29";
 const os = require('os');
 require('@electron/remote/main').initialize()
 
