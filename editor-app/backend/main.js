@@ -9,7 +9,7 @@ const sqlite3 = require("../../common-backend/bettersqlite3adapter");
 const fs = require('fs');
 const fspath = require('path');
 const LIMIT = 1000;
-const VERSION = "1.0.29";
+const VERSION = "1.0.30";
 const os = require('os');
 require('@electron/remote/main').initialize()
 
@@ -300,27 +300,31 @@ function doLoad(path) {
     }
     let file = dialog.showOpenDialogSync(win, { defaultPath: path, filters: [{ name: "Database Schema Definition", extensions: ["dsd"] }], properties: ['openFile'] });
     if (file != undefined) {
-        try {
-            path = fspath.dirname(file[0]);
-            if (fspath.normalize(path) == fspath.normalize(app.getPath("documents"))) {
-                win.webContents.send('main', { trigger: "setDialogPath", path: null });
-            } else {
-                win.webContents.send('main', { trigger: "setDialogPath", path: path });
-            }
-            let rawdata = fs.readFileSync(file[0]);
-            let data = JSON.parse(rawdata);
-            win.webContents.send('main', { trigger: "load", data, file: file[0] });
-            currentPath = path;
-        } catch (e) {
-            const options = {
-                type: 'error',
-                buttons: ['Close'],
-                defaultId: 2,
-                title: 'Load Database Schema Definition...',
-                message: 'Error: ' + e.message,
-            };
-            dialog.showMessageBox(null, options);
+        load(file[0]);
+    }
+}
+
+function load(file) {
+    let path=fspath.dirname(file);
+    try {
+        if (fspath.normalize(path) == fspath.normalize(app.getPath("documents"))) {
+            win.webContents.send('main', { trigger: "setDialogPath", path: null });
+        } else {
+            win.webContents.send('main', { trigger: "setDialogPath", path: path });
         }
+        let rawdata = fs.readFileSync(file);
+        let data = JSON.parse(rawdata);
+        win.webContents.send('main', { trigger: "load", data, file: file });
+        currentPath = path;
+    } catch (e) {
+        const options = {
+            type: 'error',
+            buttons: ['Close'],
+            defaultId: 2,
+            title: 'Load Database Schema Definition...',
+            message: 'Error: ' + e.message,
+        };
+        dialog.showMessageBox(null, options);
     }
 }
 
@@ -330,15 +334,19 @@ function doImport(path) {
     }
     let file = dialog.showOpenDialogSync({ defaultPath: path, filters: [{ name: "SQLite3 Database", extensions: ["db"] }], properties: ['openFile'] });
     if (file != undefined) {
-        path = fspath.dirname(file[0]);
-        if (fspath.normalize(path) == fspath.normalize(app.getPath("documents"))) {
-            win.webContents.send('main', { trigger: "setDialogPath", path: null });
-        } else {
-            win.webContents.send('main', { trigger: "setDialogPath", path: path });
-        }
-        win.webContents.send('main', { trigger: "import", file: file[0] });
-        currentPath = path;
+        importDB(file[0]);
     }
+}
+
+function importDB(file) {
+    let path=fspath.dirname(file);
+    if (fspath.normalize(path) == fspath.normalize(app.getPath("documents"))) {
+        win.webContents.send('main', { trigger: "setDialogPath", path: null });
+    } else {
+        win.webContents.send('main', { trigger: "setDialogPath", path: path });
+    }
+    win.webContents.send('main', { trigger: "import", file: file });
+    currentPath = path;
 }
 
 let menu = Menu.buildFromTemplate(template)
@@ -347,7 +355,15 @@ Menu.setApplicationMenu(menu)
 app.whenReady().then(() => {
     win = createWindow();
     win.once('ready-to-show', () => {
-        win.show()
+        win.show();
+        if (process.argv.length>0) {
+            let last=process.argv[process.argv.length-1];
+            if (last.toLocaleLowerCase().endsWith(".dsd")) {
+                load(last);
+            } else if (last.toLocaleLowerCase().endsWith(".db")) {
+                importDB(last);
+            }
+        }
     })
 })
 
@@ -923,3 +939,4 @@ ipcMain.on('asynchronous-message', (event, arg) => {
         sendError(e);
     }
 });
+
