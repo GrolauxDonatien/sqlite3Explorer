@@ -42,13 +42,13 @@ function display(results) {
                 case "date":
                     switch(formats[j].internalType) {
                         case "datetime":
-                            td.addClass('date').text(new Date(results.rows[i][j]).toLocaleString());
+                            td.addClass('date').text(results.rows[i][j]==null?"":new Date(results.rows[i][j]).toLocaleString());
                             break;
                         case "time":
-                            td.addClass('date').text(new Date(results.rows[i][j]).toLocaleTimeString());
+                            td.addClass('date').text(results.rows[i][j]==null?"":new Date(results.rows[i][j]).toLocaleTimeString());
                             break;
                         case "date":
-                            td.addClass('date').text(new Date(results.rows[i][j]).toLocaleDateString());
+                            td.addClass('date').text(results.rows[i][j]==null?"":new Date(results.rows[i][j]).toLocaleDateString());
                             break;        
                     }
                     break;

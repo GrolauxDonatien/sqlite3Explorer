@@ -455,6 +455,7 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
             let el = $(e);
             let oldV = format(cache.formats[i].type, cache.formats[i].internalType, el.attr('data-value'));
             let newV = getText(el);
+            if (tabledef[fieldName].nullable===true && cache.formats[i].type!="string" && newV=="") newV=null;
             el.removeClass('changed');
             if (!(oldV == null && newV == "") && (oldV != newV)) {
                 changed[fieldName] = newV;
@@ -658,13 +659,15 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
         if (text == "") return "";
         switch (type) {
             case "date":
+                let d=JSON.parse(text);
+                if (d==null) return "";
                 switch (internalType) {
                     case "datetime":
-                        return new Date(JSON.parse(text)).toLocaleString();
+                        return new Date(d).toLocaleString();
                     case "time":
-                        return new Date(JSON.parse(text)).toLocaleTimeString();
+                        return new Date(d).toLocaleTimeString();
                     case "date":
-                        return new Date(JSON.parse(text)).toLocaleDateString();
+                        return new Date(d).toLocaleDateString();
                 }
             default:
                 return JSON.parse(text);
