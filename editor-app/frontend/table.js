@@ -451,11 +451,11 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
             if (i == 0) return;
             i = i - 1;
             let fieldName = fieldNames[i];
-            if ((fieldName in pks) && pks[fieldName].auto===true) return;
+            if ((fieldName in pks) && pks[fieldName].auto === true) return;
             let el = $(e);
             let oldV = format(cache.formats[i].type, cache.formats[i].internalType, el.attr('data-value'));
             let newV = getText(el);
-            if (tabledef[fieldName].nullable===true && cache.formats[i].type!="string" && newV=="") newV=null;
+            if (tabledef[fieldName].nullable === true && cache.formats[i].type != "string" && newV == "") newV = null;
             el.removeClass('changed');
             if (!(oldV == null && newV == "") && (oldV != newV)) {
                 changed[fieldName] = newV;
@@ -491,8 +491,65 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
     if (acceptedTimeCharacters.indexOf("PM") != -1) acceptedTimeCharacters += "A";
     let acceptedDateTimeCharacters = new Date('4567-01-23T12:34:56').toLocaleString() + "089";
     if (acceptedDateTimeCharacters.indexOf("PM") != -1) acceptedDateTimeCharacters += "A";
+    function checkChar(type, c) {
+        switch (type) {
+            case "tinyint":
+            case "smallint":
+            case "mediumint":
+            case "int":
+            case "integer":
+            case "bigint":
+            case "int2":
+            case "int4":
+            case "int8":
+                if ("0123456789".indexOf(c) == -1) return false;
+                break;
+            case "numeric":
+            case "decimal":
+            case "real":
+            case "double":
+            case "double precision":
+            case "float":
+                if ("0123456789.e".indexOf(c) == -1) return false;
+                break;
+            case "time":
+                if (acceptedTimeCharacters.indexOf(c) == -1) return false;
+                break;
+            case "datetime":
+            case "timestamp":
+                if (acceptedDateTimeCharacters.indexOf(c) == -1) return false;
+                break;
+            case "date":
+                if (acceptedDateCharacters.indexOf(c) == -1) return false;
+                break;
+        }
+        return true;
+    }
     data.on('keydown', 'td[contenteditable="true"]', (event) => {
-        if (event.ctrlKey || event.altKey) return;
+        if (event.ctrlKey && event.key == "v") {
+            // run after paste has been performed
+            let el = $(event.currentTarget);
+            let idx = el.index() - 1;
+            let type = tabledef[fieldNames[idx]].type;
+            let otext=getText(el);
+            setTimeout(()=>{
+                let text = getText(el);
+                if (text==otext) return; // nothing was pasted
+                let allok=true;
+                for(let i=text.length-1; i>=0; i--) {
+                    if (!checkChar(type,text[i])) {
+                        text=text.substring(0,i)+text.substring(i+1);
+                        allok=false;
+                    }
+                }
+                el.closest('tr').removeClass('tosave').addClass('tosave');
+                el.attr('data-cwidth', el.width());
+                if (!allok) {
+                    poperror('Invalid characters where not pasted for column type ' + type);
+                }
+            },0);
+        }
+        if (event.altKey || event.ctrlKey) return;
         let el, col, row, caret, tgt, text, idx;
         switch (event.key) {
             case "ArrowDown":
@@ -566,39 +623,7 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
                     let el = $(event.currentTarget);
                     let idx = el.index() - 1;
                     let type = tabledef[fieldNames[idx]].type;
-                    let prevent = false;
-                    switch (type) {
-                        case "tinyint":
-                        case "smallint":
-                        case "mediumint":
-                        case "int":
-                        case "integer":
-                        case "bigint":
-                        case "int2":
-                        case "int4":
-                        case "int8":
-                            if ("0123456789".indexOf(event.key) == -1) prevent = true;
-                            break;
-                        case "numeric":
-                        case "decimal":
-                        case "real":
-                        case "double":
-                        case "double precision":
-                        case "float":
-                            if ("0123456789.e".indexOf(event.key) == -1) prevent = true;
-                            break;
-                        case "time":
-                            if (acceptedTimeCharacters.indexOf(event.key) == -1) prevent = true;
-                            break;
-                        case "datetime":
-                        case "timestamp":
-                            if (acceptedDateTimeCharacters.indexOf(event.key) == -1) prevent = true;
-                            break;
-                        case "date":
-                            if (acceptedDateCharacters.indexOf(event.key) == -1) prevent = true;
-                            break;
-                    }
-                    if (prevent) {
+                    if (!checkChar(type,event.key)) {
                         event.preventDefault();
                         poperror('Invalid character "' + event.key + '" for column type ' + type);
                     } else {
@@ -659,8 +684,8 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
         if (text == "") return "";
         switch (type) {
             case "date":
-                let d=JSON.parse(text);
-                if (d==null) return "";
+                let d = JSON.parse(text);
+                if (d == null) return "";
                 switch (internalType) {
                     case "datetime":
                         return new Date(d).toLocaleString();
@@ -820,7 +845,8 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
                         if (tableIdx < minTableIdx) minTableIdx = tableIdx;
                         operations.push({
                             update: formatTuple($.extend(trToPK(tr), upd)),
-                            pks: trToPK(tr)                        })
+                            pks: trToPK(tr)
+                        })
                     }
                 }
             })
