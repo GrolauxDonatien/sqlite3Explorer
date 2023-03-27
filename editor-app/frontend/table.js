@@ -114,6 +114,7 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
             range.collapse(true);
             sel.removeAllRanges();
             sel.addRange(range);
+            range.setStart(editableDiv, 0);
         }
     }
 
@@ -123,9 +124,9 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
             let isInsert = table.is('.insert');
             table.find('tr:first-child>td').each((i, e) => {
                 let size = i == 0 ? 0 : $(e).width() - 4;
-                if (i > 0 && isInsert && e.innerHTML != "") {
+/*                if (i > 0 && isInsert && e.innerHTML != "") {
                     size += 4;
-                }
+                }*/
                 sizes.push(size);
             });
             if (!isInsert) {
@@ -170,22 +171,33 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
             rowIdx += WINDOWSIZE;
         }
         for (let i = 0; i < msizes.length; i++) {
-            let dataTd = header.find(`tr:first-child>th:nth(${i})`);
+            let dataTd = header.find(`tr:first-child>th:nth(${i})`);            
             dataTd.width(msizes[i]);
         }
-        header.find('table').css('min-width', total + "px");
-        for (let i = 0; i < msizes.length; i++) {
-            let dataTd = insertTable.find(`tr>td:nth(${i})`);
-            dataTd.width(msizes[i]);
-        }
-        for (let i = 0; i < cache.inserts.length; i++) {
-            if ("___error123___" in cache.inserts[i]) {
-                let tr = $('.insert>tbody>tr').eq(i);
-                tr.find('.sqlerror').remove();
-                tr.find('td:first-child').append($('<div class="sqlerror" onclick="this.parentElement.removeChild(this)">').text(cache.inserts[i]["___error123___"]));
+        // let the browser set the size
+        setTimeout(()=>{
+            for (let i = 1; i < msizes.length; i++) {
+                let dataTd = header.find(`tr:first-child>th:nth(${i})`);
+                let nw=dataTd.width();
+                if (nw>msizes[i]) { //actual width is not the expected width: adjust
+                    msizes[i]-=(nw-msizes[i]);
+                    dataTd.width(msizes[i]);
+                }
             }
-        }
-        insertTable.css('min-width', total + "px");
+            header.find('table').css('min-width', total + "px");
+            for (let i = 0; i < msizes.length; i++) {
+                let dataTd = insertTable.find(`tr>td:nth(${i})`);
+                dataTd.width(msizes[i]);
+            }
+            for (let i = 0; i < cache.inserts.length; i++) {
+                if ("___error123___" in cache.inserts[i]) {
+                    let tr = $('.insert>tbody>tr').eq(i);
+                    tr.find('.sqlerror').remove();
+                    tr.find('td:first-child').append($('<div class="sqlerror" onclick="this.parentElement.removeChild(this)">').text(cache.inserts[i]["___error123___"]));
+                }
+            }
+            insertTable.css('min-width', total + "px");        
+        },0);
     }
 
     function addRowToInsert() {
@@ -878,11 +890,11 @@ window.tableEditor = function (header, viewport, data, dbadapter, singleTable = 
                                 n--;
                             } else {
                                 // got a tuple back, check if correct structure
-                                if (Object.keys(op.tuple).length != fieldNames.length) {
+                                if (op.tuple && Object.keys(op.tuple).length != fieldNames.length) {
                                     error("Table schema has changed in DB");
                                     return;
                                 }
-                                for (let i = 0; i < fieldNames.length; i++) {
+                                if (op.tuple) for (let i = 0; i < fieldNames.length; i++) {
                                     if (!(fieldNames[i] in op.tuple)) {
                                         error("Table schema has changed in DB");
                                         return;
