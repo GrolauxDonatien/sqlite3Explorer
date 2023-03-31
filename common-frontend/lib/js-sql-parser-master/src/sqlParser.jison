@@ -90,6 +90,8 @@ MODE                                                              return 'MODE'
 OJ                                                                return 'OJ'
 LIMIT                                                             return 'LIMIT'
 UNION                                                             return 'UNION'
+EXCEPT                                                            return 'EXCEPT'
+INTERSECT                                                         return 'INTERSECT'
 
 ","                                                               return ','
 "="                                                               return '='
@@ -178,6 +180,10 @@ unionClause
 unionClauseParenthesized
   : selectClauseParenthesized UNION distinctOpt selectClauseParenthesized { $$ = { type: 'Union', left: $1, distinctOpt: $3, right: $4 }; }
   | selectClauseParenthesized UNION distinctOpt unionClauseParenthesized { $$ = { type: 'Union', left: $1, distinctOpt: $3, right: $4 }; }
+  | selectClauseParenthesized EXCEPT distinctOpt selectClauseParenthesized { $$ = { type: 'Except', left: $1, distinctOpt: $3, right: $4 }; }
+  | selectClauseParenthesized EXCEPT distinctOpt unionClauseParenthesized { $$ = { type: 'Except', left: $1, distinctOpt: $3, right: $4 }; }
+  | selectClauseParenthesized INTERSECT distinctOpt selectClauseParenthesized { $$ = { type: 'Intersect', left: $1, distinctOpt: $3, right: $4 }; }
+  | selectClauseParenthesized INTERSECT distinctOpt unionClauseParenthesized { $$ = { type: 'Intersect', left: $1, distinctOpt: $3, right: $4 }; }
   ;
 
 selectClauseParenthesized
@@ -187,6 +193,10 @@ selectClauseParenthesized
 unionClauseNotParenthesized
   : selectClause UNION distinctOpt selectClause { $$ = { type: 'Union', left: $1, distinctOpt: $3, right: $4 } }
   | selectClause UNION distinctOpt unionClauseNotParenthesized { $$ = { type: 'Union', left: $1, distinctOpt: $3, right: $4 } }
+  | selectClause EXCEPT distinctOpt selectClause { $$ = { type: 'Except', left: $1, distinctOpt: $3, right: $4 } }
+  | selectClause EXCEPT distinctOpt unionClauseNotParenthesized { $$ = { type: 'Except', left: $1, distinctOpt: $3, right: $4 } }
+  | selectClause INTERSECT distinctOpt selectClause { $$ = { type: 'Intersect', left: $1, distinctOpt: $3, right: $4 } }
+  | selectClause INTERSECT distinctOpt unionClauseNotParenthesized { $$ = { type: 'Intersect', left: $1, distinctOpt: $3, right: $4 } }
   ;
 
 selectClause
