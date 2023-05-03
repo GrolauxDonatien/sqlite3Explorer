@@ -497,7 +497,7 @@
                         let sx=mod.prev.x;
                         let sy=mod.prev.y;
                         if (((sx>0 && v.x<0) || (sx<0 && v.x>0) || (sx==0 && v.x==0 && sy!=0)) && ((sy>0 && v.y<0) || (sy<0 && v.y>0) || (sy==0 && v.y==0 && sx!=0))) {
-                            brake=brake/8.0;
+                            brake=brake/16.0;
                         } else {
                             if (brake<1.0) brake=brake*2.0;
                             if (brake>1.0) brake=1.0;

@@ -1,0 +1,200 @@
+<! OCTYPE html>
+    <html>
+
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+        <link type="text/css" rel="stylesheet" href="table.css">
+        <link type="text/css" rel="stylesheet" href="../../common-frontend/lib/toastr/toastr.min.css">
+    </head>
+
+    <body class="table-editor">
+        <div class="nav">
+            <button id="first" title="First">&#9198;</button>
+            <button id="prev" title="Previous">&#9204;</button>
+            <input type="number" step="1"> of <span id="total"></span>
+            <button id="next" title="Next">&#9205;</button>
+            <button id="last" title="Last">&#9197;</button>
+            <button id="add" title="Add new tuple">+</button>
+        </div>
+        <table>
+            <tbody id="tuple"></tbody>
+        </table>
+        <div class="action">
+            <button id="save">Save</button>
+            <button id="cancel">Cancel</button>
+        </div>
+        <script>
+            try {
+                window.module = module; module = undefined;
+            } catch (e) { }
+        </script>
+        <script type="text/javascript" src="../../common-frontend/lib/jquery.js"></script>
+        <script type="text/javascript" src="../../common-frontend/lib/toastr/toastr.min.js"></script>
+        <script>
+            $.formeditor = {};
+        </script>
+        <script type="text/javascript" src="editorIOElectron.js"></script>
+        <script>
+            let conf = { adapter: "sqlite3" };
+
+            let str = location.search.substring(1).split('&');
+            for (let i = 0; i < str.length; i++) {
+                let idx = str[i].indexOf("=");
+                if (idx != -1) {
+                    conf[str[i].substring(0, idx)] = decodeURIComponent(str[i].substring(idx + 1));
+                }
+            }
+
+            function error(msg) {
+                alert(msg);
+            }
+
+            let total;
+
+            function recount(cb) {
+                ipcAjax({
+                    adapter: "sqlite3",
+                    action: "exec",
+                    exec: `SELECT COUNT(*) FROM ${conf.table}`,
+                    file: conf.file
+                }, (response) => {
+                    if ("error" in response) {
+                        error(response.error);
+                    } else {
+                        total = response.results.rows[0][0];
+                        $('#total').text(response.results.rows[0][0]);
+                        if (cb) cb();
+                    }
+                }, error);
+            }
+
+            let current = 0;
+            let schema;
+            let tbody = $('#tuple')
+
+            function showTuple() {
+                if (current > total + 1) current = total + 1;
+                ipcAjax({
+                    adapter: "sqlite3",
+                    action: "exec",
+                    exec: `SELECT * FROM ${conf.table} LIMIT 1 OFFSET ${current}`,
+                    file: conf.file
+                }, (response) => {
+                    if ("error" in response) {
+                        error(response.error);
+                    } else {
+                        let tuple = response.results.rows[0];
+                        let fields = response.results.fields;
+                        tbody.html('');
+                        for (let i = 0; i < fields.length; i++) {
+                            let info = schema[fields[i].name];
+                            let tr = $('<tr>');
+                            let td = $('<td>').text(fields[i].name);
+                            tr.append(td);
+                            td = $('<td>');
+                            if ("fk" in info) {
+                                let select = $('<select>');
+                                ipcAjax({
+                                    adapter: "sqlite3",
+                                    action: "exec",
+                                    exec: `SELECT * FROM ${info.fk.table}`,
+                                    file: conf.file
+                                }, (options) => { 
+                                    let fkidx=-1;
+                                    for(let j=0; j<options.results.fields.length; j++) {
+                                        if (options.results.fields[j].name===info.fk.column) {
+                                            fkidx=j;
+                                            break;
+                                        }
+                                    }
+                                    for(let j=0; j<options.results.rows.length; j++) {
+                                        let row=options.results.rows[j];
+                                        let option=$('<option>');
+                                        if (fkidx>=0) option.attr('value', row[fkidx]);
+                                        option.text(row.join('/'));
+                                        select.append(option);
+                                    }
+                                    select.val(tuple[i]);
+                                });
+                                td.append(select);
+                            } else {
+                                let input = $('<input>');
+                                if (info.pk === true && info.type == "integer" && info.auto === true) {
+                                    input.attr('disabled', 'disabled');
+                                    input.attr("title", "Cannot modify auto generated PK");
+                                }
+                                switch (fields[i].format.type) {
+                                    case "number":
+                                        input.attr('type', 'number');
+                                        break;
+                                }
+                                input.val(tuple[i]);
+                                td.append(input);
+                            }
+                            tr.append(td);
+                            tbody.append(tr);
+                        }
+                    }
+                }, error);
+            }
+
+            ipcAjax({ action: "getAndCheckTableSchema", conf }, (response) => {
+                schema = response.schema;
+                recount(showTuple);
+            }, error);
+
+            /*            window.tableEditor($('#header'), $('#viewport'), $('#data'), {
+                            count(success, error) {
+                                ipcAjax({
+                                    adapter: "sqlite3",
+                                    action: "exec",
+                                    exec: `SELECT COUNT(*) FROM ${conf.table}`,
+                                    file: conf.file
+                                }, (response) => {
+                                    if ("error" in response) {
+                                        error(response.error);
+                                    } else {
+                                        success(response.results.rows[0][0]);
+                                    }
+                                }, error);
+                            },
+                            window(fieldNames, order, offset, limit, success, error) {
+                                ipcAjax({
+                                    adapter: "sqlite3",
+                                    action: "exec",
+                                    exec: `SELECT ${fieldNames.join(',')} FROM ${conf.table} ${order.length>0?"ORDER BY "+order.join(','):""} LIMIT ${limit} OFFSET ${offset}`,
+                                    file: conf.file
+                                }, (response) => {
+                                    if ("error" in response) {
+                                        error(response.error);
+                                    } else {
+                                        success(response);
+                                    }
+                                }, error);
+                            },
+                            schema(success, error) {
+                                ipcAjax({ action: "getAndCheckTableSchema", conf }, (response) => {
+                                    success(response.schema);
+                                }, error);
+                            },
+                            batch(operations, success, error) {
+                                ipcAjax({
+                                    adapter: "sqlite3",
+                                    action: "batch",
+                                    operations,
+                                    file: conf.file,
+                                    table: conf.table
+                                }, (response)=>{
+                                    if ("error" in response) {
+                                        error(response.error);
+                                    } else {
+                                        success(response);
+                                    }
+                                }, error)
+                            }
+                        });*/
+        </script>
+    </body>
+
+    </html>

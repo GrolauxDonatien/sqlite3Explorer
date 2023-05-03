@@ -55,6 +55,7 @@ function setDBMenu() {
         ipcAjax({ action: "menu", menu: ["Database", "Query"], enabled: true, label: "Query " + short + "..." });
         ipcAjax({ action: "menu", menu: ["Database", "SQL Console"], enabled: true, label: "SQL Console " + short + "..." });
         ipcAjax({ action: "menu", menu: ["Database", "Edit Tables"], enabled: true, label: "Edit Tables of " + short + "..." });
+        ipcAjax({ action: "menu", menu: ["Database", "Edit Tuples"], enabled: true, label: "Edit Tuples of " + short + "..." });
     }
 }
 
@@ -390,3 +391,44 @@ ipcAjax.callbacks.initiateEditTables = () => {
     }, (msg) => { error(msg); });
 };
 
+ipcAjax.callbacks.initiateEditTuples = () => {
+    if (conf.file==null) {
+        alertNoFile();
+        return;
+    }
+    ipcAjax({ action: "getSchema", conf }, (response) => {
+        let tables = Object.keys(response.schema);
+        if (tables.length == 0) {
+            message(`There are no tables in ${conf.file}`);
+            return;
+        }
+        let select = $('<select>');
+        for (let i = 0; i < tables.length; i++) {
+            let option = $('<option>');
+            option.attr("value", tables[i]);
+            option.text(tables[i]);
+            select.append(option);
+        }
+        let diag = $(`<div title="Edit tuples from a table of ${conf.file}"></div>`);
+        diag.append('Select a table: ');
+        diag.append(select);
+        diag.dialog({
+            dialogClass: "no-close custom-dialog",
+            modal: true,
+            buttons: [{
+                text: "Edit...",
+                click() {
+                    ipcAjax({ action: "editTuples", conf, table: select.val() });
+                    diag.dialog("close");
+                    diag.remove();
+                }
+            }, {
+                text: "Cancel",
+                click: function () {
+                    diag.dialog("close");
+                    diag.remove();
+                }
+            }]
+        });
+    }, (msg) => { error(msg); });
+};

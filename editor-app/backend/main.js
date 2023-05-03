@@ -1,10 +1,11 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 
-const DEBUG = false;
+const DEBUG = true;
 const APP = __dirname + "/../frontend/editor.html";
 const QUERY = __dirname + "/../frontend/query.html";
 const CONSOLE = __dirname + "/../frontend/console.html";
 const EDITTABLE = __dirname + "/../frontend/table.html";
+const EDITTUPLES = __dirname + "/../frontend/screens.html";
 const sqlite3 = require("../../common-backend/bettersqlite3adapter");
 const fs = require('fs');
 const fspath = require('path');
@@ -26,7 +27,7 @@ const template = [
         label: 'File',
         submenu: [
             {
-                label: 'New...', 
+                label: 'New...',
                 click() {
                     const options = {
                         type: 'question',
@@ -109,6 +110,11 @@ const template = [
             click() {
                 win.webContents.send('main', { trigger: "initiateEditTables" });
             }
+        }, {
+            label: 'Edit Tuples...',
+            click() {
+                win.webContents.send('main', { trigger: "initiateEditTuples" });
+            }
         }, { type: "separator" },
         {
             label: 'Sync with another SQLite3 DB...',
@@ -163,7 +169,7 @@ const template = [
             }]
     }, {
         label: 'Help',
-        submenu: (DEBUG?[
+        submenu: (DEBUG ? [
             {
                 label: 'Dev Tools',
                 click() {
@@ -175,24 +181,24 @@ const template = [
                 click() {
                     win.webContents.send('main', { trigger: "reload" });
                 }
-            }]:[]).concat([
-            {
-                label: 'About',
-                click() {
-                    const options = {
-                        type: 'info',
-                        buttons: ['Close'],
-                        defaultId: 2,
-                        title: 'About SQLite3 Explorer',
-                        message: 'Developped by Donatien Grolaux under MIT license.',
-                    };
+            }] : []).concat([
+                {
+                    label: 'About',
+                    click() {
+                        const options = {
+                            type: 'info',
+                            buttons: ['Close'],
+                            defaultId: 2,
+                            title: 'About SQLite3 Explorer',
+                            message: 'Developped by Donatien Grolaux under MIT license.',
+                        };
 
-                    dialog.showMessageBox(null, options, (response, checkboxChecked) => {
-                        console.log(response);
-                        console.log(checkboxChecked);
-                    });
-                }
-            }])
+                        dialog.showMessageBox(null, options, (response, checkboxChecked) => {
+                            console.log(response);
+                            console.log(checkboxChecked);
+                        });
+                    }
+                }])
     }
 ]
 
@@ -294,6 +300,26 @@ function openNewEditTable(conf) {
     return win;
 }
 
+function openNewEditTuples(conf) {
+    let win = new BrowserWindow({
+        width: 800,
+        height: 600,
+        title: `Edit tuples of ${conf.table} from ${conf.file}`,
+        webPreferences: {
+            contextIsolation: false,
+            nodeIntegration: true,
+            nativeWindowOpen: true,
+            webSecurity: false,
+            enableRemoteModule: true
+        }
+    })
+    require("@electron/remote/main").enable(win.webContents);
+    win.removeMenu();
+    win.loadFile(EDITTUPLES, { query: conf });
+    if (DEBUG) win.webContents.openDevTools()
+    return win;
+}
+
 function doLoad(path) {
     if (path == "" || path == null) {
         path = app.getPath("documents");
@@ -305,7 +331,7 @@ function doLoad(path) {
 }
 
 function load(file) {
-    let path=fspath.dirname(file);
+    let path = fspath.dirname(file);
     try {
         if (fspath.normalize(path) == fspath.normalize(app.getPath("documents"))) {
             win.webContents.send('main', { trigger: "setDialogPath", path: null });
@@ -339,7 +365,7 @@ function doImport(path) {
 }
 
 function importDB(file) {
-    let path=fspath.dirname(file);
+    let path = fspath.dirname(file);
     if (fspath.normalize(path) == fspath.normalize(app.getPath("documents"))) {
         win.webContents.send('main', { trigger: "setDialogPath", path: null });
     } else {
@@ -356,8 +382,8 @@ app.whenReady().then(() => {
     win = createWindow();
     win.once('ready-to-show', () => {
         win.show();
-        if (process.argv.length>0) {
-            let last=process.argv[process.argv.length-1];
+        if (process.argv.length > 0) {
+            let last = process.argv[process.argv.length - 1];
             if (last.toLocaleLowerCase().endsWith(".dsd")) {
                 load(last);
             } else if (last.toLocaleLowerCase().endsWith(".db")) {
@@ -787,9 +813,9 @@ ipcMain.on('asynchronous-message', (event, arg) => {
                                     let sep = "";
                                     let params = [];
                                     for (let k in op.update) {
-                                            sql += sep + k + "=?"
-                                            sep = ", ";
-                                            params.push(op.update[k]);
+                                        sql += sep + k + "=?"
+                                        sep = ", ";
+                                        params.push(op.update[k]);
                                     }
                                     let where = " WHERE ";
                                     let wparams = [];
@@ -933,6 +959,9 @@ ipcMain.on('asynchronous-message', (event, arg) => {
                 break;
             case "editTable":
                 openNewEditTable({ file: arg.conf.file, table: arg.table });
+                break;
+            case "editTuples":
+                openNewEditTuples({ file: arg.conf.file, table: arg.table });
                 break;
         }
     } catch (e) {
