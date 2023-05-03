@@ -6,7 +6,7 @@
             getBbox, getClosest, distance, shiftFrom, shiftTo, shiftModel
         } = root;
 
-        let freeze=false;
+        let freeze = false;
 
         function createPhysCanvas(root, config = {}) {
             if (!(root instanceof Element) || root.tagName != 'CANVAS') {
@@ -57,7 +57,7 @@
             const FONT = config.font || "15px Arial";
             config.font = FONT;
             const ZOOMABLE = config.zoomable || true;
-            config.zoomable=ZOOMABLE;
+            config.zoomable = ZOOMABLE;
 
             let context;
             const animations = [];
@@ -81,7 +81,7 @@
                 })
 
                 for (let i = 0; i < model.length; i++) {
-                    let m=model[i];
+                    let m = model[i];
                     if ("draw" in m) {
                         if (!("super" in m)) {
                             if (m.type in renderers) {
@@ -224,6 +224,12 @@
             }
 
             renderers.line = renderers.link;
+
+            function sign(s) {
+                if (s<0) return -1;
+                if (s>0) return 1;
+                return 0;
+            }
 
             function runPhysics(model, elapsed, recenter = true, forceBoundaryCheck = false) {
                 let vectors = [];
@@ -465,20 +471,44 @@
                         context.fillText(`(${v.x} , ${v.y})`, model[i].x, model[i].y)
                     }
                     let mod = model[i];
-                    if (mod.lock === true || mod._lock === true) continue;
+                    if (mod.lock === true || mod._lock === true) {
+                        delete mod.prev;
+                        continue;
+                    }
                     let v = vectors[i];
-                    if (v.x == 0 && v.y == 0) continue;
+                    if (v.x == 0 && v.y == 0) {
+                        delete mod.prev;
+                        continue;
+                    }
                     let d2 = v.x * v.x + v.y * v.y;
-                    if (d2 < friction) continue;
+                    if (d2 < friction) {
+                        delete mod.prev;
+                        continue;
+                    }
                     if (d2 > max) {
                         let d = Math.sqrt(d2);
                         let m = Math.sqrt(max);
                         v.x = v.x * m / d;
                         v.y = v.y * m / d;
                     }
-                    mod.old = { x: mod.x, y: mod.y };
-                    mod.x += v.x;
-                    mod.y += v.y;
+                    let brake;
+                    if ("prev" in mod) {
+                        brake=mod.prev.b;
+                        let sx=mod.prev.x;
+                        let sy=mod.prev.y;
+                        if (((sx>0 && v.x<0) || (sx<0 && v.x>0) || (sx==0 && v.x==0 && sy!=0)) && ((sy>0 && v.y<0) || (sy<0 && v.y>0) || (sy==0 && v.y==0 && sx!=0))) {
+                            brake=brake/8.0;
+                        } else {
+                            if (brake<1.0) brake=brake*2.0;
+                            if (brake>1.0) brake=1.0;
+                        }
+                    } else {
+                        brake=1.0;
+                    }
+                    mod.old = { x: mod.x, y: mod.y, b: brake };
+                    mod.x += v.x * brake;
+                    mod.y += v.y * brake;
+                    mod.prev={x:v.x,y:v.y,b:brake};
                 }
                 for (let i in (forceBoundaryCheck ? model : vectors)) {
                     let mod = model[i];
@@ -589,7 +619,7 @@
 
             function repaint() {
                 if (!init) return; // not yet initialized, repaint is called anyway at the end of initialization
-                freeze=false;
+                freeze = false;
                 if (previousTs !== undefined) return; // paint is already bound to be called
                 triggerEvent("startPaint");
                 window.requestAnimationFrame(paint);
@@ -609,7 +639,7 @@
                             return function () {
                                 let r = model[prop].apply(model, arguments);
                                 if (!freeze) repaint();
-                                setTimeout(checkBoundaries,0);
+                                setTimeout(checkBoundaries, 0);
                                 return r;
                             }
                         } else {
@@ -667,7 +697,7 @@
                         root.style.zoom = (zoom * 100) + "%";
                         resize();
                     }
-                });    
+                });
             }
 
             // manage events
@@ -700,12 +730,12 @@
                 }
             }
 
-            function triggerEvent(which, event={}) {
+            function triggerEvent(which, event = {}) {
                 for (let i = 0; i < events[which].length; i++) {
                     let propagate = true;
-                    event.stopPropagation=function() { propagate = false; };
-                    event.physCanvas=physCanvas;
-                    if (events[which][i](event)===false) propagate=false;
+                    event.stopPropagation = function () { propagate = false; };
+                    event.physCanvas = physCanvas;
+                    if (events[which][i](event) === false) propagate = false;
                     if (!propagate) return propagate;
                 }
                 return true;
@@ -816,7 +846,7 @@
             });
 
             addEventListener("mousemove", (event) => {
-                if (event.buttons == 0 && state!="NONE") { // if the user drags outside the canvas and release the mouse button, the mouseup event is not triggered. We force its trigger here.
+                if (event.buttons == 0 && state != "NONE") { // if the user drags outside the canvas and release the mouse button, the mouseup event is not triggered. We force its trigger here.
                     for (let i = 0; i < events["mouseup"].length; i++) {
                         if (events["mouseup"][i](event) === false) return;
                     }
@@ -825,9 +855,9 @@
                 switch (state) {
                     case "MAYBE":
                         if (distance({ x: ox, y: oy }, { x: event.canvasX, y: event.canvasY }) > 2 * zoom) {
-                            event.oX=ox;
-                            event.oY=oy;
-                            if (triggerEvent("dragStart",event)) {
+                            event.oX = ox;
+                            event.oY = oy;
+                            if (triggerEvent("dragStart", event)) {
                                 state = "DRAG";
                                 // let it leak into DRAG below;
                             } else {
@@ -858,15 +888,15 @@
                         // coming from a drag, we must kill the click event that follows
                         window.addEventListener('click', captureClick, true);
                         bringIntoView();
-                        triggerEvent("dragStop",event)
+                        triggerEvent("dragStop", event)
                     // then we can leak into the next case which reset the state machine
                     case "MAYBE":
                         ot.lock = false;
                         delete ot.lock;
                         delete ot;
                         delete ots;
-                        if (state=="MAYBE" && event.which!=1) { // probably a right-click, let the event bubble up
-                            state="NONE";
+                        if (state == "MAYBE" && event.which != 1) { // probably a right-click, let the event bubble up
+                            state = "NONE";
                         } else {
                             state = "NONE";
                             return false;
@@ -893,8 +923,8 @@
                                 e.height -= bbox.y1;
                                 shiftModel(e.model, 0, -bbox.y1);
                             }
-                            e.width = Math.max(e.width - (e.paddingLeft||0), (bbox.x2 - bbox.x1 + PADX + PADX) || 0) + (e.paddingLeft||0);
-                            e.height = Math.max(e.height - (e.paddingTop||0), (bbox.y2 - bbox.y1 + PADX + PADX) || 0) + (e.paddingTop||0);
+                            e.width = Math.max(e.width - (e.paddingLeft || 0), (bbox.x2 - bbox.x1 + PADX + PADX) || 0) + (e.paddingLeft || 0);
+                            e.height = Math.max(e.height - (e.paddingTop || 0), (bbox.y2 - bbox.y1 + PADX + PADX) || 0) + (e.paddingTop || 0);
                         }
                     }
                 }
@@ -932,7 +962,7 @@
             const physCanvas = {
                 model: proxy,
                 freezeUntilRepaint() {
-                    freeze=true;
+                    freeze = true;
                 },
                 animate: function (a) {
                     a._start = new Date();
@@ -946,12 +976,12 @@
                 checkBoundaries,
                 bringIntoView,
                 bbox() {
-                    let bb=getBbox(model);
+                    let bb = getBbox(model);
                     return {
-                        x:bb.x1,
-                        y:bb.y1,
-                        width:bb.x2-bb.x1,
-                        height:bb.y2-bb.y1
+                        x: bb.x1,
+                        y: bb.y1,
+                        width: bb.x2 - bb.x1,
+                        height: bb.y2 - bb.y1
                     }
                 },
                 zoom() {
