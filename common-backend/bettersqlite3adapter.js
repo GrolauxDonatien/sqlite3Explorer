@@ -105,7 +105,7 @@ async function connect(conf) {
 
     async function createDBModel() {
         if (db == null) throw new Error("DB not connected");
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             try {
                 let tables = {};
                 let stmt = db.prepare(`SELECT name FROM sqlite_master
@@ -152,7 +152,34 @@ async function connect(conf) {
                         };
                     }
                 }
+                for(let k in tables) {
+                    let checks=await getCheckConstraints(k);
+//                    if (checks.length>0) {
+                        tables[k].checks___=checks;
+//                    }
+                }
                 resolve(tables);
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    async function getCheckConstraints(table) {
+        if (db == null) throw new Error("DB not connected");
+        return new Promise((resolve, reject)=>{
+            try {
+                let stmt = db.prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name=?`);
+                let create = stmt.get(table);
+                let sql=create.sql.trim();
+                sql=sql.substring(0,sql.length-1); // drop last ) that may break the regexp
+                let constraints=[...sql.matchAll(/\bcheck\s*\((.+)\)/g)]
+                let ret=[];
+                for(let i=0; i<constraints.length; i++) {
+                    let c=constraints[i];
+                    ret.push(c[c.length-1]);
+                }
+                resolve(ret);
             } catch (e) {
                 reject(e);
             }
@@ -216,7 +243,7 @@ async function connect(conf) {
     return new Promise((resolve, reject) => {
         try {
             db = new sqlite3(conf.file, { readonly: !conf.readwrite, fileMustExist: true });
-            resolve({ createDBModel, connect, disconnect, query: queryDB, types, internalTypeToType, direct: db, transaction: db.transaction });
+            resolve({ createDBModel, connect, disconnect, query: queryDB, types, internalTypeToType, direct: db, transaction: db.transaction, getCheckConstraints });
         } catch (e) {
             reject(e);
         }

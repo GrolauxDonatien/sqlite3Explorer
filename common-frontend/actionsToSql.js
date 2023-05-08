@@ -26,7 +26,7 @@ function schemaToSql(schema) {
         let str=[];
         let pks=[];
         for(let column in schema[table]) {
-            if (column=="coords___") continue;
+            if (column.endsWith("___")) continue;
             let col=`  ${schema[table][column].name} ${schema[table][column].internalType.toUpperCase()}`;
             if (schema[table][column].pk) {
                 pks.push(column);
@@ -51,7 +51,7 @@ function schemaToSql(schema) {
             str.push(`  PRIMAY KEY (${pks.join(', ')})`);
         }
         for(let column in schema[table]) {
-            if (column=="coords___") continue;
+            if (column.endsWith("___")) continue;
             if ('fk' in schema[table][column]) {
                 if (dependencies.indexOf(schema[table][column].fk.table)==-1) {
                     if (table==schema[table][column].fk.table) continue;
@@ -60,6 +60,7 @@ function schemaToSql(schema) {
                 str.push(`  FOREIGN KEY (${column}) REFERENCES ${schema[table][column].fk.table} (${schema[table][column].fk.column})`)
             }
         }
+        debugger;
         tables.push({
             name:table,
             sql:`CREATE TABLE ${table} (
@@ -331,7 +332,7 @@ function updateSchema(oldschema,diff) {
                 let fmt=schemaToSql({["___"+table+"_tmp"]:oldTables[table].tableSchema});
                 let cols=[];
                 for(let k in oldTables[table].originalSchema) {
-                    if (k=="coords___") continue;
+                    if (k.endsWith("___")) continue;
                     if (k in oldTables[table].tableSchema) cols.push(k);
                 }
                 str.push(`PRAGMA foreign_keys = OFF;

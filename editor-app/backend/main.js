@@ -426,7 +426,7 @@ function sameColumn(col1, col2) {
 function sameTableSchema(table1, table2) {
     if (table1 == undefined || table2 == undefined) return false;
     for (let k in table1) {
-        if (k == "coords___") continue;
+        if (k .endsWith("___")) continue;
         if (!(k in table2)) return false;
         if (!sameColumn(table1[k], table2[k])) return false;
     }

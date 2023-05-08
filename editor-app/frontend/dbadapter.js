@@ -1017,7 +1017,7 @@
                     let table = froms[j];
                     if (table in schema) {
                         for (let column in schema[table]) {
-                            if (column == "coords___") continue;
+                            if (column .endsWith("___")) continue;
                             fields.push({
                                 shortname: column,
                                 longname: short + "." + column,
@@ -1045,7 +1045,7 @@
                 let table = (short in alias) ? alias[short] : short;
                 if (table in schema) {
                     for (let column in schema[table]) {
-                        if (column == "coords___") continue;
+                        if (column .endsWith("___")) continue;
                         fields.push({
                             shortname: column,
                             longname: short + "." + column,
@@ -1073,7 +1073,7 @@
                 let column = all[i].substring(idx + 1);
                 if (table in schema) {
                     if (column in schema[table]) {
-                        if (column == "coords___") continue;
+                        if (column .endsWith("___")) continue;
                         fields.push({
                             shortname: column,
                             longname: short + "." + column,
@@ -1166,7 +1166,7 @@
         let ret = [];
         if (table in schema) {
             for (let column in schema[table]) {
-                if (column == "coords___") continue;
+                if (column .endsWith("___")) continue;
                 if (schema[table][column].pk === true) ret.push(column);
             }
         }

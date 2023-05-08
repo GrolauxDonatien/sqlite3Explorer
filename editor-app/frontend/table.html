@@ -68,6 +68,7 @@
                 },
                 schema(success, error) {
                     ipcAjax({ action: "getAndCheckTableSchema", conf }, (response) => {
+                        delete response.schema.checks___;
                         success(response.schema);
                     }, error);
                 },

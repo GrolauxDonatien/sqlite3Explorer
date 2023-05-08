@@ -47,7 +47,7 @@ const editorMergeUtils = (() => {
         for (let table in colors) {
             applyMap(colors[table]);
             for (let column in colors[table]) {
-                if (column == "coords___") continue;
+                if (column .endsWith("___")) continue;
                 applyMap(colors[table][column]);
                 if ("fk" in schema[table][column] && (colors[table][column].fk.coords___ in map)) {
                     let c = map[colors[table][column].fk.coords___];
@@ -121,7 +121,7 @@ const editorMergeUtils = (() => {
         for (let table in schema) {
             clear(colors[table]);
             for (let column in schema[table]) {
-                if (column == "coords___") continue;
+                if (column .endsWith("___")) continue;
                 clear(colors[table][column]);
                 if ("fk" in colors[table][column]) {
                     clear(colors[table][column].fk);
@@ -151,6 +151,7 @@ const editorMergeUtils = (() => {
         for (let table in schema) {
             if (check(colors[table])) return true;
             for (let column in schema[table]) {
+                if (column=="checks___") continue;
                 if (check(colors[table][column])) return true;
                 if ("fk" in schema[table][column]) {
                     if (check(colors[table][column].fk)) return true;
@@ -165,7 +166,7 @@ const editorMergeUtils = (() => {
         let colors = {};
         function setColumns(table) {
             for (let c in local[table]) {
-                if (c == "coords___") continue;
+                if (c .endsWith("___")) continue;
                 if (c in remote[table]) {
                     let c1 = $.extend({}, local[table][c]);
                     let c2 = $.extend({}, remote[table][c]);
@@ -183,7 +184,7 @@ const editorMergeUtils = (() => {
                 }
             }
             for (let c in remote[table]) {
-                if (c == "coords___") continue;
+                if (c .endsWith("___")) continue;
                 if (c in schema[table]) continue;
                 schema[table][c] = remote[table][c];
                 colors[table][c] = { coords___: REMOTEUNSET };
@@ -201,7 +202,7 @@ const editorMergeUtils = (() => {
                 schema[table] = local[table]; // keep local table
                 colors[table] = { coords___: LOCALUNSET };
                 for (let c in schema[table]) {
-                    if (c == "coords___") continue;
+                    if (c .endsWith("___")) continue;
                     colors[table][c] = { coords___: LOCALUNSET };
                 }
             }
@@ -211,7 +212,7 @@ const editorMergeUtils = (() => {
             schema[table] = remote[table]; // keep remote table
             colors[table] = { coords___: REMOTEUNSET };
             for (let c in schema[table]) {
-                if (c == "coords___") continue;
+                if (c .endsWith("___")) continue;
                 colors[table][c] = { coords___: REMOTEUNSET };
             }
         }
@@ -264,7 +265,7 @@ const editorMergeUtils = (() => {
             } else if (colors[table].coords___ == setko) {
                 todelete[table]={}
                 for(let c in schema[table]) {
-                    if (c=="coords___") continue;
+                    if (c.endsWith("___")) continue;
                     if ("fk" in schema[table][c]) {
                         todelete[table][schema[table][c].fk.table]=true;
                     }
@@ -273,7 +274,7 @@ const editorMergeUtils = (() => {
             }
             let idx = 0;
             for (let column in schema[table]) {
-                if (column == "coords___") continue;
+                if (column .endsWith("___")) continue;
                 if (schema[table][column].renamed !== undefined) {
                     if (colors[table][column].coords___ == setok) { // it's the other name that is now in use
                         list.push(["renameColumn", table, schema[table][column].renamed.name, column]);
@@ -302,6 +303,7 @@ const editorMergeUtils = (() => {
                 continue; // do not process columns of deleted table
             }
             for (let column in schema[table]) {
+                if (column=='checks___') continue;
                 if (colors[table][column].coords___ == setko) {
                     continue; // deleted column
                 }
@@ -659,7 +661,7 @@ const editorMergeUtils = (() => {
                     let fmt = schemaToSql({ ["___" + table + "_tmp"]: oldTables[table].tableSchema });
                     let cols = [];
                     for (let k in oldTables[table].tableSchema) { // for all columns of new table
-                        if (k == "coords___") continue;
+                        if (k .endsWith("___")) continue;
                         if (k in oldTables[table].originalSchema) { // was present before => copy
                             cols.push(k);
                         } else { // not present => use default
@@ -761,7 +763,7 @@ const editorMergeUtils = (() => {
         for (let table2 in schema) {
             if (table2 == other) continue;
             for (let column in schema[table2]) {
-                if (column == "coords___") continue;
+                if (column .endsWith("___")) continue;
                 if (("fk" in schema[table2][column]) && schema[table2][column].fk.table == other) {
                     save.fks123.push({
                         table: table2,
@@ -813,7 +815,7 @@ const editorMergeUtils = (() => {
         let ltable = (color == REMOTESETOK ? table : other);
         let rtable = (color == REMOTESETOK ? other : table);
         for (let c in local[ltable]) {
-            if (c == "coords___") continue;
+            if (c .endsWith("___")) continue;
             if (c in remote[rtable]) {
                 let c1 = $.extend({}, local[ltable][c]);
                 let c2 = $.extend({}, remote[rtable][c]);
@@ -832,7 +834,7 @@ const editorMergeUtils = (() => {
             }
         }
         for (let c in remote[rtable]) {
-            if (c == "coords___") continue;
+            if (c .endsWith("___")) continue;
             if (c in schema[other]) continue;
             colors[other][c] = { coords___: REMOTEUNSET };
         }
@@ -895,6 +897,8 @@ const editorMergeUtils = (() => {
         // step 2: attempt renaming columns
         for (let table in schema) {
             let cols = Object.keys(schema[table]);
+            let idx=cols.indexOf('checks___');
+            if (idx!=-1) cols.splice(idx,1);
             for (let i = 0; i < cols.length - 1; i++) {
                 let column1 = cols[i];
                 if (colors[table][column1].coords___ == LOCALUNSET) { // target for rename of column
@@ -935,7 +939,7 @@ const editorMergeUtils = (() => {
         // step 3: resolve conflicting FKs to loca
         for (let table in schema) {
             for (let column in schema[table]) {
-                if (column == "coords___") continue;
+                if (column .endsWith("___")) continue;
                 if ("fk" in colors[table][column] && colors[table][column].fk.coords___ == CONFLICTUNSET) {
                     if ("fk2" in schema[table][column]) {
                         colors[table][column].fk.fk1 = schema[table][column].fk;
@@ -963,7 +967,7 @@ const editorMergeUtils = (() => {
         for (let table in schema) {
             set(colors[table]);
             for (let column in schema[table]) {
-                if (column == "coords___") continue;
+                if (column .endsWith("___")) continue;
                 set(colors[table][column]);
                 if ("fk" in colors[table][column]) {
                     set(colors[table][column].fk);
@@ -983,7 +987,7 @@ const editorMergeUtils = (() => {
             let autoincrement = false;
             let pkcol=-1;
             for (let column in schema[table]) {
-                if (column == "coords___") continue;
+                if (column .endsWith("___")) continue;
                 let col = `  ${column} ${schema[table][column].internalType.toUpperCase()}`;
                 if (schema[table][column].pk) {
                     pks.push(column);
@@ -1015,13 +1019,18 @@ const editorMergeUtils = (() => {
                 }
             }
             for (let column in schema[table]) {
-                if (column == "coords___") continue;
+                if (column .endsWith("___")) continue;
                 if ('fk' in schema[table][column]) {
                     if (dependencies.indexOf(schema[table][column].fk.table) == -1) {
                         if (table == schema[table][column].fk.table) continue;
                         dependencies.push(schema[table][column].fk.table);
                     }
                     str.push(`  FOREIGN KEY (${column}) REFERENCES ${schema[table][column].fk.table} (${schema[table][column].fk.column})`)
+                }
+            }
+            if ("checks___" in schema[table]) {
+                for(let i=0; i<schema[table].checks___.length; i++) {
+                    str.push(`  CHECK(${schema[table].checks___[i]})`);
                 }
             }
             if (str.length > 0) {

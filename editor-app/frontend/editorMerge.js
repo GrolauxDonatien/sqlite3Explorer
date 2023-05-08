@@ -76,7 +76,7 @@
                 };
             }
             for (let column in schema[target.table]) {
-                if (column == "coords___") continue;
+                if (column .endsWith("___")) continue;
                 if ((column in colors[target.table]) && checks.indexOf(colors[target.table][column].coords___) != -1 && coldef(schema[target.table][column]) == def && sameFK(schema[target.table][target.column], schema[target.table][column])) {
                     // this column has the right color and the same definition of this => propose rename
                     menu[`Rename ${target.column} to ${column}`] = () => {
@@ -257,7 +257,7 @@
                         let hasLocal = false;
                         let hasRemote = false;
                         for (let column in colors[target.table]) {
-                            if (column == "coords___") continue;
+                            if (column .endsWith("___")) continue;
                             if (!hasLocal && colors[target.table][column].coords___ == LOCALUNSET || colors[target.table][column].coords___ == LOCALSETKO || colors[target.table][column].coords___ == LOCALSETOK) {
                                 hasLocal = true;
                             }

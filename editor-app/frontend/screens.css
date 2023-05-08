@@ -11,6 +11,7 @@ table>tbody>tr>td:first-child {
 
 table input, table select, table textarea {
   width: 100%;
+  min-width: 400px;
 }
 
 

@@ -150,8 +150,11 @@ const editorUCC = function (schema) {
         addColumn(table, def, idx) {
             let current = [];
             let coords = null;
+            let checks=[];
             if ("coords___" in schema[table]) coords = schema[table].coords___;
+            if ("checks___" in schema[table]) checks = schema[table].checks___;
             delete schema[table].coords___;
+            delete schema[table].checks___;
             if (idx == undefined) idx = Object.keys(schema[table]).length;
             for (let k in schema[table]) current.push(schema[table][k]);
             current.splice(idx, 0, def);
@@ -165,6 +168,7 @@ const editorUCC = function (schema) {
                 delete coords.height;
                 schema[table].coords___ = coords;
             }
+            schema[table].checks___ = checks;
             diff.push(["deleteColumn", table, def.name]);
         },
         createTable(table, x, y) {
@@ -197,7 +201,7 @@ const editorUCC = function (schema) {
         deleteTable(table) {
             let old = schema[table];
             for (let k in schema[table]) {
-                if (k == "coords___") continue;
+                if (k .endsWith("___")) continue;
                 self.deleteColumn(table, k);
             }
             diff.push(["createTable", table, schema[table].coords___.x, schema[table].coords___.y]);

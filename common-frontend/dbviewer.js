@@ -215,7 +215,7 @@
             let w = Math.min(ctx.measureText(table).width, 150);
             let i = 2;
             for (let k2 in model[table]) {
-                if (k2 == "coords___") continue;
+                if (k2 .endsWith("___")) continue;
                 w = Math.max(w, ctx.measureText(k2 + " ").width + ctx.measureText(model[table][k2].type).width + (checkradios ? CHECKBOXSIZE : 0));
                 i++;
             }
@@ -464,7 +464,7 @@
             let content = model[table];
             let i = 0;
             for (let k in content) {
-                if (k == "coords___") continue;
+                if (k .endsWith("___")) continue;
                 let selc = $.extend({}, sel, { column: k });
                 let defcolor = colors ? selectionModel.color(selc) : BLACK;
                 let tx, ty;
@@ -773,7 +773,7 @@
                 table.width = model[k]["coords___"].width;
                 table.height = model[k]["coords___"].height;
                 for (let c in model[k]) {
-                    if (c == 'coords___') continue;
+                    if (c .endsWith("___")) continue;
                     let col = model[k][c];
                     if ('fk' in col) {
                         fks.push({

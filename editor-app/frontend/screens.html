@@ -208,6 +208,7 @@
 
             ipcAjax({ action: "getAndCheckTableSchema", conf }, (response) => {
                 schema = response.schema;
+                delete schema.checks___;
                 recount(showTuple);
             }, error);
 

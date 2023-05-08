@@ -821,7 +821,7 @@
                 if (name.table in schema) {
                     tables[name.alias + ".*"] = "";
                     for (let k in schema[name.table]) {
-                        if (k == "coords___") continue;
+                        if (k .endsWith("___")) continue;
                         columns[name.alias + "." + k] = "";
                     }
                 }
@@ -1098,7 +1098,7 @@
                                 let columns = {};
                                 for (let t in validTables) {
                                     for (let c in validTables[t]) {
-                                        if (c == "coords___") continue;
+                                        if (c .endsWith("___")) continue;
                                         columns[t + "." + c] = "";
                                     }
                                 }
@@ -1193,7 +1193,7 @@
                 if (name.table in schema) {
                     tables[name.alias] = schema[name.table];
                     for (let k in schema[name.table]) {
-                        if (k == "coords___") continue;
+                        if (k .endsWith("___")) continue;
                         columns[name.alias + "." + k] = "";
                     }
                 }
@@ -1273,7 +1273,7 @@
                                 let name = getTableAliasName(model.from[i]);
                                 if (name.table in schema) {
                                     for (let k in schema[name.table]) {
-                                        if (k == "coords___") continue;
+                                        if (k .endsWith("___")) continue;
                                         columns[name.alias + "." + k] = "";
                                     }
                                 }
@@ -1325,7 +1325,7 @@
                         let name = getTableAliasName(model.from[i]);
                         if (name.table in schema) {
                             for (let k in schema[name.table]) {
-                                if (k == "coords___") continue;
+                                if (k .endsWith("___")) continue;
                                 columns[name.alias + "." + k] = "";
                             }
                         }

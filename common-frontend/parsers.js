@@ -769,7 +769,7 @@ let parsers = (function () {
             let from = getTableAliasName(newModel.from[i]);
             if (from.table in schema) {
                 for (let k in schema[from.table]) {
-                    if (k == "coords___") continue;
+                    if (k .endsWith("___")) continue;
                     if (k in dis) {
                         bad[k] = true;
                     } else {

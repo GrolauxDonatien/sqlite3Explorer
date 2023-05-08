@@ -145,7 +145,7 @@
                         for (let k in whereParams) delete whereParams[k];
                         model.table = select.val();
                         for (let column in schema[model.table]) {
-                            if (column == "coords___") continue;
+                            if (column .endsWith("___")) continue;
                             whereParams[model.table + "." + column] = schema[model.table][column].type;
                         }
                     })
@@ -302,7 +302,7 @@
                         let ref = {};
                         for (let k in tableavailable) delete tableavailable[k];
                         for (let k in table) {
-                            if (k == "" || k == "coords___") continue;
+                            if (k == "" || k .endsWith("___")) continue;
                             ref[tableName + "." + k] = tgt.length;
                             tgt.push(k);
                             tableavailable[tableName + "." + k] = "";
@@ -348,7 +348,7 @@
                             }
                             if (i < tgt.length) {
                                 let info = table[tgt[i]];
-                                if (tgt[i] == "coords___") continue;
+                                if (tgt[i] .endsWith("___")) continue;
                                 let el = child.find('td:last-child');
                                 el.text(tgt[i]);
                                 if (info.pk) {
