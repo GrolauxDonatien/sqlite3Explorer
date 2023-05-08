@@ -252,7 +252,17 @@
                                 clearRenamedTable(schema,colors,target.table);
                             }
                         });
-    
+                    } else if (colors.dummy.conflicts___!==undefined) {
+                        setMenu(event, {
+                            [`Local schema: accept CHECK`]: () => {
+                                colors[target.table].coords___ == LOCALSETOK;
+                                //renameTable(target.table, other, schema[target.table].coords___, colors[target.table].coords___ == LOCALSETOK ? REMOTESETOK : LOCALSETOK);
+                            },
+                            [`External schema: accept CHECK`]:()=>{
+                                colors[target.table].coords___ == REMOTESETOK;
+                                //clearRenamedTable(schema,colors,target.table);
+                            }
+                        });
                     } else {
                         let hasLocal = false;
                         let hasRemote = false;
@@ -453,6 +463,24 @@
             create: () => {
                 // avoids weird canvas draw issues, by letting the browser the opportunity to cdisplay the canvas first
                 setTimeout(() => {
+                    let annotations={};
+                    for(let t in colors) {
+                        for(let c in colors[t]) {
+                            if (c=="conflicts___") {
+                                if (!(t in annotations)) {
+                                    annotations[t]={};
+                                }
+                                annotations[t].conflicts___=colors[t][c];
+                            }
+                            if (c.endsWith("___")) continue;
+                            if ("conflicts" in colors[t][c]) {
+                                if (!(t in annotations)) {
+                                    annotations[t]={};
+                                }
+                                annotations[t][c]=colors[t][c].conflicts;
+                            }
+                        }
+                    }
                     schemaUI = dbSchemaUI({
                         model: schema,
                         aliases: {},
@@ -460,7 +488,8 @@
                         checkboxes: false,
                         radios: false,
                         colors: true,
-                        selectionModel: sm
+                        selectionModel: sm,
+                        annotations
                     });
                 }, 1);
             }

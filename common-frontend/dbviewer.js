@@ -36,13 +36,13 @@
     }
 
     function isEmpty(obj) {
-        for(let k in obj) {
+        for (let k in obj) {
             return false;
         }
         return true;
     }
 
-    function createDBViewer({ model, aliases: aliases, root, events, checkboxes, radios, colors, selectionModel, ontablemove, emptymessage="", ondrawn }) {
+    function createDBViewer({ model, aliases: aliases, root, events, checkboxes, radios, colors, selectionModel, ontablemove, emptymessage = "", ondrawn, annotations={} }) {
 
         selectionModel.clear();
         if (checkboxes === undefined) checkboxes = false;
@@ -73,8 +73,8 @@
 
         function physRepaint() {
             if (isEmpty(model)) {
-                ctx.fillStyle="black";
-                ctx.fillText(emptymessage,50,50);
+                ctx.fillStyle = "black";
+                ctx.fillText(emptymessage, 50, 50);
             } else {
                 phys.repaint();
             }
@@ -212,11 +212,18 @@
         }
 
         function measureTable(table) {
-            let w = Math.min(ctx.measureText(table).width, 150);
+            let txt=table;
+            if (annotations[table] && annotations[table].conflicts___) {
+                txt+=" "+annotations[table].conflicts___;
+            }
+            let w = Math.min(ctx.measureText(txt).width, 150);
             let i = 2;
             for (let k2 in model[table]) {
-                if (k2 .endsWith("___")) continue;
+                if (k2.endsWith("___")) continue;
                 w = Math.max(w, ctx.measureText(k2 + " ").width + ctx.measureText(model[table][k2].type).width + (checkradios ? CHECKBOXSIZE : 0));
+                if (annotations[table] && annotations[table][k2]) {
+                    w += Math.max(w, ctx.measureText(" " + annotations[table][k2]).width);
+                }
                 i++;
             }
             return { width: w + 10 + iconWidth * 2, height: textHeight * i };
@@ -458,13 +465,17 @@
             } else {
                 ctx.fillStyle = selectionModel.isSelected(sel) ? DARKBLUE : defcolor;
                 ctx.fillText(title, c.x + 2, c.y + textHeight + 2);
+                if (annotations[table] && annotations[table].conflicts___) {
+                    ctx.fillStyle = GRAY;
+                    ctx.fillText(annotations[table].conflicts___, c.x + 2 + ctx.measureText(title+" ").width, c.y + textHeight + 2 )
+                }
             }
             if (!("columns" in c)) c.columns = {};
 
             let content = model[table];
             let i = 0;
             for (let k in content) {
-                if (k .endsWith("___")) continue;
+                if (k.endsWith("___")) continue;
                 let selc = $.extend({}, sel, { column: k });
                 let defcolor = colors ? selectionModel.color(selc) : BLACK;
                 let tx, ty;
@@ -516,9 +527,13 @@
                 }
                 tx += iconWidth * 2;
                 ctx.fillText(k, tx, ty);
-                tx = c.x + c.width - ctx.measureText(content[k].type).width - 4;
+                let txt=content[k].type;
+                if (annotations[table] && annotations[table][k]) {
+                    txt+=" "+annotations[table][k];
+                }
+                tx = c.x + c.width - ctx.measureText(txt).width - 4;
                 ctx.fillStyle = GRAY;
-                ctx.fillText(content[k].type, tx, ty);
+                ctx.fillText(txt, tx, ty);
                 i++;
                 c.columns[k] = { x: c.x + 2, y: c.y + 8 + textHeight * i, width: c.width, height: textHeight };
                 if (alias === undefined) {
@@ -668,7 +683,7 @@
             physRepaint();
             if (ondrawn) {
                 ondrawn();
-                ondrawn=undefined;
+                ondrawn = undefined;
             }
         }
 
@@ -773,7 +788,7 @@
                 table.width = model[k]["coords___"].width;
                 table.height = model[k]["coords___"].height;
                 for (let c in model[k]) {
-                    if (c .endsWith("___")) continue;
+                    if (c.endsWith("___")) continue;
                     let col = model[k][c];
                     if ('fk' in col) {
                         fks.push({
@@ -845,7 +860,7 @@
                 }
                 link.from = indexes[fks[i].from.table];
                 link.to = indexes[fks[i].to.table];
-                if (link.to!==undefined) {
+                if (link.to !== undefined) {
                     phys.model.push(link);
                     link.fk = fks[i];
                     let th = tablehash(link);
@@ -856,7 +871,7 @@
                             renderFK(ctx, fks[i].from.table, fks[i].from.column,
                                 fks[i].to, counts[th], link.count);
                         });
-                    }    
+                    }
                 }
             }
 
@@ -973,7 +988,7 @@
             resizeCanvas();
         }
 
-        setTimeout(physRepaint,100);
+        setTimeout(physRepaint, 100);
 
         return {
             redraw: function () {

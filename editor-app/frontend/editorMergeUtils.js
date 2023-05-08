@@ -177,6 +177,20 @@ const editorMergeUtils = (() => {
                         colors[table][c] = { coords___: NEUTRAL };
                     } else {
                         colors[table][c] = $.extend({ coords___: CONFLICTUNSET }, c2);
+                        let conflicts=[];
+                        if (c1.internalType!=c2.internalType) {
+                            conflicts.push(c1.internalType+' <> '+c2.internalType);
+                        }
+                        if (c1.nullable!=c2.nullable) {
+                            conflicts.push(c1.nullable?"NULL <> NOT NULL":"NOT NULL <> NULL");
+                        }
+                        if (c1.pk != c2.pk) {
+                            conflicts.push(c1.pk?"PK <> NOT PK":"NOT PK <> PK");
+                        }
+                        if (c1.unique != c2.unique) {
+                            conflicts.push(c1.pk?"UNIQUE <> NOT UNIQUE":"NOT UNIQUE <> UNIQUE");
+                        }
+                        colors[table][c].conflicts=conflicts.join(" / ");
                     }
                 } else {
                     schema[table][c] = $.extend({}, local[table][c]);
@@ -198,6 +212,22 @@ const editorMergeUtils = (() => {
                 delete schema[table].coords___.width;
                 colors[table] = { coords___: NEUTRAL };
                 setColumns(table); // resolve their columns
+                let c1=local[table].checks___ || [];
+                let c2=remote[table].checks___ || [];
+                let same=c1.length==c2.length;
+                if (same) {
+                    for(let i=0; i<c1.length; i++) {
+                        if (c1[i]!=c2[i]) {
+                            same=false;
+                            break;
+                        }
+                    }
+                }
+                if (!same) {
+                    colors[table].conflicts___="CHECK differs";
+                    if (!(table in colors)) colors[table]={};
+                    colors[table].coords___=CONFLICTUNSET;
+                }
             } else {
                 schema[table] = local[table]; // keep local table
                 colors[table] = { coords___: LOCALUNSET };
