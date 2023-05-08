@@ -30,6 +30,9 @@ function toJSType(type) {
         case "boolean":
         case "bit":
             return "boolean";
+        case "datetime":
+        case "timestamp without time zone":
+            return "datetime";
         default:
             if (type.indexOf("date") !== -1) {
                 return "date";
@@ -142,7 +145,7 @@ async function connect(conf) {
                     let rows = stmt.all();
                     for (let i = 0; i < rows.length; i++) {
                         let row = rows[i];
-                        
+
                         tables[k][row.from].fk = {
                             table: row.table,
                             column: row.to

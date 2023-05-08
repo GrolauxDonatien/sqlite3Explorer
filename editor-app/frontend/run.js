@@ -17,10 +17,19 @@ $.SQLEditor.menuModel = function (target, menu) {
     } else if ("table" in target) {
         if (conf.file) {
             menu["sep3"] = null;
-            menu[`Edit content of table ${target.table}...`] = () => {
+            menu[`Edit whole table ${target.table}...`] = () => {
                 ipcAjax({ action: "getSchema", conf }, (response) => {
                     if (target.table in response.schema) {
                         ipcAjax({ action: "editTable", conf, table: target.table });
+                    } else {
+                        message(`There is no table ${target.table} in ${conf.file}`);
+                    }
+                });
+            }
+            menu[`Edit tuples of table ${target.table}...`] = () => {
+                ipcAjax({ action: "getSchema", conf }, (response) => {
+                    if (target.table in response.schema) {
+                        ipcAjax({ action: "editTuples", conf, table: target.table });
                     } else {
                         message(`There is no table ${target.table} in ${conf.file}`);
                     }

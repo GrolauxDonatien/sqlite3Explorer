@@ -4,25 +4,33 @@
     <head>
         <meta charset="UTF-8">
         <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
-        <link type="text/css" rel="stylesheet" href="table.css">
+        <link type="text/css" rel="stylesheet" href="screens.css">
         <link type="text/css" rel="stylesheet" href="../../common-frontend/lib/toastr/toastr.min.css">
     </head>
 
     <body class="table-editor">
         <div class="nav">
+            <button id="bugfix" title="First">&#9204;</button>
             <button id="first" title="First">&#9198;</button>
             <button id="prev" title="Previous">&#9204;</button>
-            <input type="number" step="1"> of <span id="total"></span>
+            <input type="number" step="1" id="current"> of <span id="total"></span>
             <button id="next" title="Next">&#9205;</button>
             <button id="last" title="Last">&#9197;</button>
-            <button id="add" title="Add new tuple">+</button>
+            <span class="filter">
+                <label for="filter">Filter: </label>
+                <input id="filter">
+            </span>
         </div>
         <table>
             <tbody id="tuple"></tbody>
         </table>
         <div class="action">
-            <button id="save">Save</button>
-            <button id="cancel">Cancel</button>
+            <button id="add" title="Add new tuple">Add</button>
+            <button id="delete">Delete</button>
+            <span>
+                <button id="save">Save</button>
+                <button id="cancel">Cancel</button>                    
+            </span>
         </div>
         <script>
             try {
@@ -36,6 +44,11 @@
         </script>
         <script type="text/javascript" src="editorIOElectron.js"></script>
         <script>
+
+            setTimeout(()=>{
+                $('#bugfix').remove();
+            },0);
+
             let conf = { adapter: "sqlite3" };
 
             let str = location.search.substring(1).split('&');
@@ -71,72 +84,126 @@
 
             let current = 0;
             let schema;
-            let tbody = $('#tuple')
+            let tbody = $('#tuple');
+            let curel = $('#current');
+            let inerror = false;
 
             function showTuple() {
-                if (current > total + 1) current = total + 1;
-                ipcAjax({
-                    adapter: "sqlite3",
-                    action: "exec",
-                    exec: `SELECT * FROM ${conf.table} LIMIT 1 OFFSET ${current}`,
-                    file: conf.file
-                }, (response) => {
-                    if ("error" in response) {
-                        error(response.error);
-                    } else {
-                        let tuple = response.results.rows[0];
-                        let fields = response.results.fields;
-                        tbody.html('');
-                        for (let i = 0; i < fields.length; i++) {
-                            let info = schema[fields[i].name];
-                            let tr = $('<tr>');
-                            let td = $('<td>').text(fields[i].name);
-                            tr.append(td);
-                            td = $('<td>');
-                            if ("fk" in info) {
-                                let select = $('<select>');
-                                ipcAjax({
-                                    adapter: "sqlite3",
-                                    action: "exec",
-                                    exec: `SELECT * FROM ${info.fk.table}`,
-                                    file: conf.file
-                                }, (options) => { 
-                                    let fkidx=-1;
-                                    for(let j=0; j<options.results.fields.length; j++) {
-                                        if (options.results.fields[j].name===info.fk.column) {
-                                            fkidx=j;
-                                            break;
-                                        }
-                                    }
-                                    for(let j=0; j<options.results.rows.length; j++) {
-                                        let row=options.results.rows[j];
-                                        let option=$('<option>');
-                                        if (fkidx>=0) option.attr('value', row[fkidx]);
-                                        option.text(row.join('/'));
-                                        select.append(option);
-                                    }
-                                    select.val(tuple[i]);
-                                });
-                                td.append(select);
-                            } else {
-                                let input = $('<input>');
-                                if (info.pk === true && info.type == "integer" && info.auto === true) {
-                                    input.attr('disabled', 'disabled');
-                                    input.attr("title", "Cannot modify auto generated PK");
+                function showFields(fields, tuple) {
+                    for (let i = 0; i < fields.length; i++) {
+                        let info = schema[fields[i].name];
+                        let tr = $('<tr>');
+                        let td = $('<td>').text(fields[i].name);
+                        tr.append(td);
+                        td = $('<td>');
+                        if ("fk" in info) {
+                            let select = $('<select>');
+                            ipcAjax({
+                                adapter: "sqlite3",
+                                action: "exec",
+                                exec: `SELECT * FROM ${info.fk.table}`,
+                                file: conf.file
+                            }, (options) => {
+                                if (info.nullable) {
+                                    let option = $('<option>');
+                                    option.text("<NULL>");
+                                    select.append(option);
                                 }
-                                switch (fields[i].format.type) {
-                                    case "number":
-                                        input.attr('type', 'number');
+                                let fkidx = -1;
+                                for (let j = 0; j < options.results.fields.length; j++) {
+                                    if (options.results.fields[j].name === info.fk.column) {
+                                        fkidx = j;
                                         break;
+                                    }
                                 }
-                                input.val(tuple[i]);
-                                td.append(input);
+                                for (let j = 0; j < options.results.rows.length; j++) {
+                                    let row = options.results.rows[j];
+                                    let option = $('<option>');
+                                    if (fkidx >= 0) option.attr('value', row[fkidx]);
+                                    option.text(row.join('/'));
+                                    select.append(option);
+                                }
+                                if (tuple[i]) select.val(tuple[i]);
+                            });
+                            td.append(select);
+                        } else {
+                            let input = $('<input>');
+                            if (info.pk === true && info.type == "integer" && info.auto === true) {
+                                input.attr('disabled', 'disabled');
+                                input.attr("title", "Cannot modify auto generated PK");
+                                input.attr('data-pk', JSON.stringify(tuple[i]));
+                            } else if (info.pk === true) {
+                                input.attr('data-pk', JSON.stringify(tuple[i]));
                             }
-                            tr.append(td);
-                            tbody.append(tr);
+                            switch (schema[fields[i].name].format) {
+                                case "datetime":
+                                    input.attr('type', 'datetime-local');
+                                    if (tuple[i]) tuple[i] = tuple[i].replace(" ", 'T');
+                                    break;
+                                case "time":
+                                    input.attr('type', 'time');
+                                    break;
+                                case "date":
+                                    input.attr('type', 'date');
+                                    break;
+                                case "boolean":
+                                    input.attr('type', 'checkbox');
+                                    input.prop('checked', tuple[i] === 1);
+                                    break;
+                                case "number":
+                                    input.attr('type', 'number');
+                                    break;
+                            }
+                            if (tuple[i]) input.val(tuple[i]);
+                            td.append(input);
                         }
+                        tr.append(td);
+                        tbody.append(tr);
                     }
-                }, error);
+                }
+
+                if (isNaN(current) || current < 0) current = 0;
+                if (current > total) current = total;
+                if (current == total) {
+                    curel.val("");
+                    tbody.html('');
+                    inerror = false;
+                    let fields = Object.keys(schema);
+                    for (let i = 0; i < fields.length; i++) fields[i] = { name: fields[i] };
+                    showFields(fields, []);
+                } else {
+                    ipcAjax({
+                        adapter: "sqlite3",
+                        action: "exec",
+                        exec: `SELECT * FROM ${conf.table} LIMIT 1 OFFSET ${current}`,
+                        file: conf.file
+                    }, (response) => {
+                        tbody.html('');
+                        if ("error" in response) {
+                            curel.val("");
+                            inerror = true;
+                            error(response.error);
+                        } else {
+                            inerror = false;
+                            curel.val(current + 1);
+                            let tuple = response.results.rows[0];
+                            let fields = Object.keys(schema);
+                            let rfields = {};
+                            for (let i = 0; i < response.results.fields.length; i++) rfields[response.results.fields[i].name] = true;
+                            for (let i = 0; i < fields.length; i++) {
+                                if (fields[i] in rfields) {
+                                    fields[i] = { name: fields[i] };
+                                } else {
+                                    inerror = true;
+                                    curel.val("");
+                                    error("The schema has changed and the database needs to be imported back again first.");
+                                    return;
+                                }
+                            }
+                            showFields(fields, tuple);
+                        }
+                    }, error);
+                }
             }
 
             ipcAjax({ action: "getAndCheckTableSchema", conf }, (response) => {
@@ -144,56 +211,210 @@
                 recount(showTuple);
             }, error);
 
-            /*            window.tableEditor($('#header'), $('#viewport'), $('#data'), {
-                            count(success, error) {
-                                ipcAjax({
-                                    adapter: "sqlite3",
-                                    action: "exec",
-                                    exec: `SELECT COUNT(*) FROM ${conf.table}`,
-                                    file: conf.file
-                                }, (response) => {
-                                    if ("error" in response) {
-                                        error(response.error);
-                                    } else {
-                                        success(response.results.rows[0][0]);
-                                    }
-                                }, error);
-                            },
-                            window(fieldNames, order, offset, limit, success, error) {
-                                ipcAjax({
-                                    adapter: "sqlite3",
-                                    action: "exec",
-                                    exec: `SELECT ${fieldNames.join(',')} FROM ${conf.table} ${order.length>0?"ORDER BY "+order.join(','):""} LIMIT ${limit} OFFSET ${offset}`,
-                                    file: conf.file
-                                }, (response) => {
-                                    if ("error" in response) {
-                                        error(response.error);
-                                    } else {
-                                        success(response);
-                                    }
-                                }, error);
-                            },
-                            schema(success, error) {
-                                ipcAjax({ action: "getAndCheckTableSchema", conf }, (response) => {
-                                    success(response.schema);
-                                }, error);
-                            },
-                            batch(operations, success, error) {
-                                ipcAjax({
-                                    adapter: "sqlite3",
-                                    action: "batch",
-                                    operations,
-                                    file: conf.file,
-                                    table: conf.table
-                                }, (response)=>{
-                                    if ("error" in response) {
-                                        error(response.error);
-                                    } else {
-                                        success(response);
-                                    }
-                                }, error)
+            $('#prev').on('click', () => {
+                if (current > 0) {
+                    current--;
+                    showTuple();
+                }
+            });
+
+            $('#first').on('click', () => {
+                if (current != 0) {
+                    current = 0;
+                    showTuple();
+                }
+            });
+
+            $('#next').on('click', () => {
+                if (current < total - 1) {
+                    current++;
+                    showTuple();
+                }
+            });
+
+            $('#last').on('click', () => {
+                if (current != total - 1) {
+                    current = total - 1;
+                    showTuple();
+                }
+            });
+
+            $('#add').on('click', () => {
+                if (current != total) {
+                    current = total;
+                    showTuple();
+                }
+            });
+
+            curel.on('change', () => {
+                current = parseInt(curel.val()) - 1;
+                showTuple();
+            });
+
+            $('#cancel').on('click', () => {
+                // just reload tuple
+                showTuple();
+            });
+
+            $('#delete').on('click', () => {
+                if (inerror) {
+                    error('Cannot save while there is an error.');
+                    return;
+                }
+                if (current == total) {
+                    current = 0;
+                    showTuple();
+                    return;
+                }
+                // gather data
+                let pk = {};
+                let inputs = $('table input, table select');
+                let i = 0;
+                for (let f in schema) {
+                    let el = inputs[i];
+                    i++;
+                    let info = schema[f];
+                    if (info.pk === true) {
+                        let v = el.getAttribute('data-pk');
+                        if (v) {
+                            pk[f] = JSON.parse(v);
+                        }
+                        if (info.type == "integer" && info.auto === true) continue;
+                    }
+                }
+                if (Object.keys(pk).length == 0) {
+                    error('Cannot delete if there is no PK');
+                    return;
+                }
+                let op = {
+                    delete: pk
+                }
+                ipcAjax({
+                    adapter: "sqlite3",
+                    action: "batch",
+                    operations: [op],
+                    file: conf.file,
+                    table: conf.table
+                }, (response) => {
+                    if ("error" in response) {
+                        error(response.error);
+                    } else {
+                        for (let i = 0; i < response.results.length; i++) {
+                            let op = response.results[i];
+                            if (!op.success) {
+                                error(op.error);
+                                showTuple();
+                                return;
                             }
-                        });*/
+                        }
+                        current--;
+                        total--;
+                        $('#total').text(total);
+                        showTuple();
+                    }
+                }, (msg) => {
+                    error(msg);
+                    showTuple();
+                })
+            });
+
+            $('#save').on('click', () => {
+                if (inerror) {
+                    error('Cannot save while there is an error.');
+                    return;
+                }
+                // gather data
+                let tuple = {};
+                let pk = {};
+                let inputs = $('table input, table select');
+                let i = 0;
+                for (let f in schema) {
+                    let el = inputs[i];
+                    i++;
+                    let info = schema[f];
+                    if (info.pk === true) {
+                        let v = el.getAttribute('data-pk');
+                        if (v) {
+                            pk[f] = JSON.parse(v);
+                        }
+                        if (info.type == "integer" && info.auto === true) continue;
+                    }
+                    let v;
+                    switch (schema[f].format) {
+                        case "datetime":
+                            v = el.value.replace('T', ' ');
+                            break;
+                        case "time":
+                            v = el.value;
+                            break;
+                        case "date":
+                            v = el.value;
+                            break;
+                        case "boolean":
+                            v = el.checked ? 1 : 0;
+                            break;
+                        case "number":
+                            v = parseFloat(el.value);
+                            if (isNaN(v)) v = null;
+                            break;
+                        default:
+                            v = el.value;
+                    }
+                    tuple[f] = v;
+                }
+                let op;
+                if (current == total) {
+                    op = {
+                        insert: tuple,
+                        pks: Object.keys(pk)
+                    }
+                } else {
+                    if (Object.keys(pk).length == 0) {
+                        error('Cannot update if there is no PK');
+                        return;
+                    }
+                    op = {
+                        update: tuple,
+                        pks: pk
+                    }
+                }
+                ipcAjax({
+                    adapter: "sqlite3",
+                    action: "batch",
+                    operations: [op],
+                    file: conf.file,
+                    table: conf.table
+                }, (response) => {
+                    if ("error" in response) {
+                        error(response.error);
+                    } else {
+                        for (let i = 0; i < response.results.length; i++) {
+                            let op = response.results[i];
+                            if (!op.success) {
+                                error(op.error);
+                                showTuple();
+                                return;
+                            }
+                        }
+                        if (current == total) {
+                            total++;
+                            $('#total').text(total);
+                            showTuple();
+                        } else {
+                            $('table .changed').removeClass('changed')
+                        }
+                    }
+                }, (msg) => {
+                    error(msg);
+                    showTuple();
+                })
+            })
+
+            $('table').on('change', 'input,select', (event) => {
+                event.target.parentElement.parentElement.children[0].setAttribute('class', 'changed')
+            });
+
+
         </script>
     </body>
 
