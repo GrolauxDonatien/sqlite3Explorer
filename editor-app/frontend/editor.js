@@ -334,6 +334,73 @@ $.SQLEditor = {};
         }, callback);
     }
 
+    function editChecks(table) {
+        let checks=JSON.parse(JSON.stringify(schema[table].checks___||[]));
+        let diag = $(`<div title="Edit check constraints of ${table}"></div>`);
+        let tbl = $('<table>');
+        let tbody = $('<tbody>');
+        tbl.append(tbody);
+        diag.append(tbl);
+        for(let i=0; i<checks.length; i++) {
+            let tr=$('<tr>');
+            tbody.append(tr);
+            let td=$('<td>');
+            tr.append(td);
+            let input=$('<input>');
+            td.append(input);
+            td=$('<td>');
+            tr.append(td);
+            input.val(checks[i]);
+//            checkTr(tr);
+        }
+        let tr=$('<tr>');
+        tbody.append(tr);
+        let td=$('<td>');
+        tr.append(td);
+        let input=$('<input>');
+        td.append(input);
+        tbody.on('change','input',(event)=>{
+            if (event.target.value=="") {
+                event.target.parentElement.parentElement.remove();
+            }
+            // always check for an empty last line
+            let tr=tbody.find('tr:last');
+            if (tr.length==0 || tr.find('input').val()!="") {
+                let tr=$('<tr>');
+                tbody.append(tr);
+                let td=$('<td>');
+                tr.append(td);
+                let input=$('<input>');
+                td.append(input);
+            }
+        });
+
+        diag.dialog({
+            dialogClass: "no-close",
+            modal: true,
+            minHeight: 120,
+            maxHeight: 600,
+            minWidth: 640,
+            buttons: [{
+                text: "Ok",
+                click: function () {
+                    let checks=[];
+                    tbody.find('input').each((_,el)=>{if (el.value!="") checks.push(el.value)});
+                    schema[table].checks___=checks;
+                    diag.dialog("close");
+                    diag.remove();
+                }
+            }, {
+                text: "Cancel",
+                click: function () {
+                    diag.dialog("close");
+                    diag.remove();
+                }
+            }]
+        });
+    }
+
+
     function mutate(o) {
         return $.extend({}, o);
     }
@@ -482,6 +549,9 @@ $.SQLEditor = {};
                                             conf.schemaUI.redraw();
                                         }
                                     }, 1);
+                                },
+                                [`Edit check constraints for table <i>${target.table}</i>...`]: () => {
+                                    editChecks(target.table);
                                 },
                                 "sep2": null,
                                 [`Add column...`]: () => {
