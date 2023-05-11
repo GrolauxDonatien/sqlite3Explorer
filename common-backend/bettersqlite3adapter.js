@@ -173,7 +173,7 @@ async function connect(conf) {
                 let create = stmt.get(table);
                 let sql=create.sql.trim();
                 sql=sql.substring(0,sql.length-1); // drop last ) that may break the regexp
-                let constraints=[...sql.matchAll(/\bcheck\s*\((.+)\)/g)]
+                let constraints=[...sql.matchAll(/\b[cC][hH][eE][cC][kK]\s*\((.+)\)/g)]
                 let ret=[];
                 for(let i=0; i<constraints.length; i++) {
                     let c=constraints[i];
