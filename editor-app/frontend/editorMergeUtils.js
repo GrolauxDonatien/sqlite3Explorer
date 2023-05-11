@@ -28,6 +28,8 @@ const editorMergeUtils = (() => {
     const CONFLICTSETREMOTE = '#466186';
     const CONFLICTUNSET = '#FF3200';
     const NEUTRAL = '#000000';
+    const CHECKLOCAL="checkslocal___";
+    const CHECKREMOTE="checksremote___";
 
     function unsetfk2() {
         if ("fk2" in schema[target.table][target.column]) {
@@ -47,7 +49,7 @@ const editorMergeUtils = (() => {
         for (let table in colors) {
             applyMap(colors[table]);
             for (let column in colors[table]) {
-                if (column .endsWith("___")) continue;
+                if (column.endsWith("___")) continue;
                 applyMap(colors[table][column]);
                 if ("fk" in schema[table][column] && (colors[table][column].fk.coords___ in map)) {
                     let c = map[colors[table][column].fk.coords___];
@@ -121,7 +123,7 @@ const editorMergeUtils = (() => {
         for (let table in schema) {
             clear(colors[table]);
             for (let column in schema[table]) {
-                if (column .endsWith("___")) continue;
+                if (column.endsWith("___")) continue;
                 clear(colors[table][column]);
                 if ("fk" in colors[table][column]) {
                     clear(colors[table][column].fk);
@@ -151,7 +153,7 @@ const editorMergeUtils = (() => {
         for (let table in schema) {
             if (check(colors[table])) return true;
             for (let column in schema[table]) {
-                if (column=="checks___") continue;
+                if (column == "checks___") continue;
                 if (check(colors[table][column])) return true;
                 if ("fk" in schema[table][column]) {
                     if (check(colors[table][column].fk)) return true;
@@ -166,7 +168,7 @@ const editorMergeUtils = (() => {
         let colors = {};
         function setColumns(table) {
             for (let c in local[table]) {
-                if (c .endsWith("___")) continue;
+                if (c.endsWith("___")) continue;
                 if (c in remote[table]) {
                     let c1 = $.extend({}, local[table][c]);
                     let c2 = $.extend({}, remote[table][c]);
@@ -177,20 +179,20 @@ const editorMergeUtils = (() => {
                         colors[table][c] = { coords___: NEUTRAL };
                     } else {
                         colors[table][c] = $.extend({ coords___: CONFLICTUNSET }, c2);
-                        let conflicts=[];
-                        if (c1.internalType!=c2.internalType) {
-                            conflicts.push(c1.internalType+' <> '+c2.internalType);
+                        let conflicts = [];
+                        if (c1.internalType != c2.internalType) {
+                            conflicts.push(c1.internalType + ' <> ' + c2.internalType);
                         }
-                        if (c1.nullable!=c2.nullable) {
-                            conflicts.push(c1.nullable?"NULL <> NOT NULL":"NOT NULL <> NULL");
+                        if (c1.nullable != c2.nullable) {
+                            conflicts.push(c1.nullable ? "NULL <> NOT NULL" : "NOT NULL <> NULL");
                         }
                         if (c1.pk != c2.pk) {
-                            conflicts.push(c1.pk?"PK <> NOT PK":"NOT PK <> PK");
+                            conflicts.push(c1.pk ? "PK <> NOT PK" : "NOT PK <> PK");
                         }
                         if (c1.unique != c2.unique) {
-                            conflicts.push(c1.pk?"UNIQUE <> NOT UNIQUE":"NOT UNIQUE <> UNIQUE");
+                            conflicts.push(c1.pk ? "UNIQUE <> NOT UNIQUE" : "NOT UNIQUE <> UNIQUE");
                         }
-                        colors[table][c].conflicts=conflicts.join(" / ");
+                        colors[table][c].conflicts = conflicts.join(" / ");
                     }
                 } else {
                     schema[table][c] = $.extend({}, local[table][c]);
@@ -198,7 +200,7 @@ const editorMergeUtils = (() => {
                 }
             }
             for (let c in remote[table]) {
-                if (c .endsWith("___")) continue;
+                if (c.endsWith("___")) continue;
                 if (c in schema[table]) continue;
                 schema[table][c] = remote[table][c];
                 colors[table][c] = { coords___: REMOTEUNSET };
@@ -212,27 +214,29 @@ const editorMergeUtils = (() => {
                 delete schema[table].coords___.width;
                 colors[table] = { coords___: NEUTRAL };
                 setColumns(table); // resolve their columns
-                let c1=local[table].checks___ || [];
-                let c2=remote[table].checks___ || [];
-                let same=c1.length==c2.length;
+                let c1 = local[table].checks___ || [];
+                let c2 = remote[table].checks___ || [];
+                let same = c1.length == c2.length;
                 if (same) {
-                    for(let i=0; i<c1.length; i++) {
-                        if (c1[i]!=c2[i]) {
-                            same=false;
+                    for (let i = 0; i < c1.length; i++) {
+                        if (c1[i] != c2[i]) {
+                            same = false;
                             break;
                         }
                     }
                 }
                 if (!same) {
-                    colors[table].conflicts___="CHECK differs";
-                    if (!(table in colors)) colors[table]={};
-                    colors[table].coords___=CONFLICTUNSET;
+                    colors[table].conflicts___ = "CHECK differs";
+                    colors[table][CHECKLOCAL] = c1;
+                    colors[table][CHECKREMOTE] = c2;
+                    if (!(table in colors)) colors[table] = {};
+                    colors[table].coords___ = CONFLICTUNSET;
                 }
             } else {
                 schema[table] = local[table]; // keep local table
                 colors[table] = { coords___: LOCALUNSET };
                 for (let c in schema[table]) {
-                    if (c .endsWith("___")) continue;
+                    if (c.endsWith("___")) continue;
                     colors[table][c] = { coords___: LOCALUNSET };
                 }
             }
@@ -242,7 +246,7 @@ const editorMergeUtils = (() => {
             schema[table] = remote[table]; // keep remote table
             colors[table] = { coords___: REMOTEUNSET };
             for (let c in schema[table]) {
-                if (c .endsWith("___")) continue;
+                if (c.endsWith("___")) continue;
                 colors[table][c] = { coords___: REMOTEUNSET };
             }
         }
@@ -274,7 +278,7 @@ const editorMergeUtils = (() => {
         }
     }
 
-    function diffToActions(schema, colors, setok, setko, conflict) {
+    function diffToActions(schema, colors, setok, setko, conflict, checkkey) {
         const list = [];
         const todelete = {};
         for (let table in schema) {
@@ -290,21 +294,25 @@ const editorMergeUtils = (() => {
                     let other = Object.keys(all)[0];
                     list.push(["renameTable", other, table]);
                 }
+            } else if (checkkey in colors[table]) { // there is a conflict in check constraints
+                if (colors[table].coords___ == setok) {
+                    list.push(["setChecks", table, colors[table][checkkey]]);
+                }
             } else if (colors[table].coords___ == setok || colors[table].coords___ == conflict) {
                 list.push(["createTable", table, schema[table].coords___.x, schema[table].coords___.y]);
             } else if (colors[table].coords___ == setko) {
-                todelete[table]={}
-                for(let c in schema[table]) {
+                todelete[table] = {}
+                for (let c in schema[table]) {
                     if (c.endsWith("___")) continue;
                     if ("fk" in schema[table][c]) {
-                        todelete[table][schema[table][c].fk.table]=true;
+                        todelete[table][schema[table][c].fk.table] = true;
                     }
                 }
                 continue; // do not process columns of deleted table
             }
             let idx = 0;
             for (let column in schema[table]) {
-                if (column .endsWith("___")) continue;
+                if (column.endsWith("___")) continue;
                 if (schema[table][column].renamed !== undefined) {
                     if (colors[table][column].coords___ == setok) { // it's the other name that is now in use
                         list.push(["renameColumn", table, schema[table][column].renamed.name, column]);
@@ -333,7 +341,7 @@ const editorMergeUtils = (() => {
                 continue; // do not process columns of deleted table
             }
             for (let column in schema[table]) {
-                if (column=='checks___') continue;
+                if (column == 'checks___') continue;
                 if (colors[table][column].coords___ == setko) {
                     continue; // deleted column
                 }
@@ -350,29 +358,29 @@ const editorMergeUtils = (() => {
                 }
             }
         }
-        let touched=true;
-        let deleted={};
-        while(touched && Object.keys(todelete).length>0) { // as long as we keep on deleting tables & there are tables still to be deleted
-            touched=false; // mark as no deletion so far
-            for(let table in todelete) {
-                let ok=true;
-                for(let d in todelete[table]) {
+        let touched = true;
+        let deleted = {};
+        while (touched && Object.keys(todelete).length > 0) { // as long as we keep on deleting tables & there are tables still to be deleted
+            touched = false; // mark as no deletion so far
+            for (let table in todelete) {
+                let ok = true;
+                for (let d in todelete[table]) {
                     if (d in todelete && !(d in deleted)) {
-                        ok=false;
+                        ok = false;
                         break;
                     }
                 } // if all dependents of table are already deleted
                 if (ok) {
                     list.push(["deleteTable", table]); // delete table
-                    deleted[table]=true; // add to deleted
+                    deleted[table] = true; // add to deleted
                     delete todelete[table]; // remove from todelete
-                    touched=true; // mark as we deleted something
+                    touched = true; // mark as we deleted something
                 }
-            }    
+            }
         }
-        if (!touched && Object.keys(todelete).length>0) { // there are still tables needing deletion, but we cannot delete them because of dependencies
+        if (!touched && Object.keys(todelete).length > 0) { // there are still tables needing deletion, but we cannot delete them because of dependencies
             // this could happen with circular FK betwenn two tables for example
-            for(let table in todelete) { // we just give up and mark them to be deleted anyway
+            for (let table in todelete) { // we just give up and mark them to be deleted anyway
                 list.push(["deleteTable", table]);
             }
         }
@@ -573,6 +581,10 @@ const editorMergeUtils = (() => {
                         createFK(column, fktable, fkcolumn) {
                             needsRecreate = true;
                             tableSchema[column].fk = { table: fktable, column: fkcolumn };
+                        },
+                        setChecks(checks) {
+                            needsRecreate = true;
+                            tableSchema.checks___ = checks;
                         }
                     })[def.ops[i][0]].apply(null, def.ops[i].slice(2));
                 }
@@ -680,7 +692,7 @@ const editorMergeUtils = (() => {
             for (let table in oldTables) {
                 if (oldTables[table].needsRecreate) {
                     if (oldTables[table].needsDelete) {
-                        oldTables[table].needsRecreate=false;
+                        oldTables[table].needsRecreate = false;
                         continue;
                     }
                     if (!recreating) {
@@ -691,7 +703,7 @@ const editorMergeUtils = (() => {
                     let fmt = schemaToSql({ ["___" + table + "_tmp"]: oldTables[table].tableSchema });
                     let cols = [];
                     for (let k in oldTables[table].tableSchema) { // for all columns of new table
-                        if (k .endsWith("___")) continue;
+                        if (k.endsWith("___")) continue;
                         if (k in oldTables[table].originalSchema) { // was present before => copy
                             cols.push(k);
                         } else { // not present => use default
@@ -793,7 +805,7 @@ const editorMergeUtils = (() => {
         for (let table2 in schema) {
             if (table2 == other) continue;
             for (let column in schema[table2]) {
-                if (column .endsWith("___")) continue;
+                if (column.endsWith("___")) continue;
                 if (("fk" in schema[table2][column]) && schema[table2][column].fk.table == other) {
                     save.fks123.push({
                         table: table2,
@@ -845,7 +857,7 @@ const editorMergeUtils = (() => {
         let ltable = (color == REMOTESETOK ? table : other);
         let rtable = (color == REMOTESETOK ? other : table);
         for (let c in local[ltable]) {
-            if (c .endsWith("___")) continue;
+            if (c.endsWith("___")) continue;
             if (c in remote[rtable]) {
                 let c1 = $.extend({}, local[ltable][c]);
                 let c2 = $.extend({}, remote[rtable][c]);
@@ -864,7 +876,7 @@ const editorMergeUtils = (() => {
             }
         }
         for (let c in remote[rtable]) {
-            if (c .endsWith("___")) continue;
+            if (c.endsWith("___")) continue;
             if (c in schema[other]) continue;
             colors[other][c] = { coords___: REMOTEUNSET };
         }
@@ -905,8 +917,12 @@ const editorMergeUtils = (() => {
     function autoUpdateRemote(local, remote, schema, colors) {
         // step 0 : start over
         clearSelections(schema, colors);
-        // step 1: attempt renaming tables
+        // step 1: attempt checks + renaming tables
         for (let table1 in schema) {
+            if (CHECKLOCAL in colors[table1]) {
+                colors[table1].coords___=LOCALSETOK;
+                continue;
+            }
             if (colors[table1].coords___ != LOCALUNSET) continue; // table1 must be a target for rename
             let bestrename = null;
             let bestscore = 0.75;
@@ -927,8 +943,8 @@ const editorMergeUtils = (() => {
         // step 2: attempt renaming columns
         for (let table in schema) {
             let cols = Object.keys(schema[table]);
-            let idx=cols.indexOf('checks___');
-            if (idx!=-1) cols.splice(idx,1);
+            let idx = cols.indexOf('checks___');
+            if (idx != -1) cols.splice(idx, 1);
             for (let i = 0; i < cols.length - 1; i++) {
                 let column1 = cols[i];
                 if (colors[table][column1].coords___ == LOCALUNSET) { // target for rename of column
@@ -969,7 +985,7 @@ const editorMergeUtils = (() => {
         // step 3: resolve conflicting FKs to loca
         for (let table in schema) {
             for (let column in schema[table]) {
-                if (column .endsWith("___")) continue;
+                if (column.endsWith("___")) continue;
                 if ("fk" in colors[table][column] && colors[table][column].fk.coords___ == CONFLICTUNSET) {
                     if ("fk2" in schema[table][column]) {
                         colors[table][column].fk.fk1 = schema[table][column].fk;
@@ -997,7 +1013,7 @@ const editorMergeUtils = (() => {
         for (let table in schema) {
             set(colors[table]);
             for (let column in schema[table]) {
-                if (column .endsWith("___")) continue;
+                if (column.endsWith("___")) continue;
                 set(colors[table][column]);
                 if ("fk" in colors[table][column]) {
                     set(colors[table][column].fk);
@@ -1015,13 +1031,13 @@ const editorMergeUtils = (() => {
             let str = [];
             let pks = [];
             let autoincrement = false;
-            let pkcol=-1;
+            let pkcol = -1;
             for (let column in schema[table]) {
-                if (column .endsWith("___")) continue;
+                if (column.endsWith("___")) continue;
                 let col = `  ${column} ${schema[table][column].internalType.toUpperCase()}`;
                 if (schema[table][column].pk) {
                     pks.push(column);
-                    pkcol=str.length;
+                    pkcol = str.length;
                     if (schema[table][column].internalType == "integer" && !schema[table][column].auto) {
                         warnings.push(`${table}.${column} is forced to be autogenerated because it is integer primary key.`);
                     }
@@ -1042,14 +1058,14 @@ const editorMergeUtils = (() => {
                 str.push(col);
             }
             if (pks.length > 0) {
-                if (pks.length==1 && pkcol!=-1 && autoincrement) {
-                    str[pkcol]+=" PRIMARY KEY AUTOINCREMENT";
+                if (pks.length == 1 && pkcol != -1 && autoincrement) {
+                    str[pkcol] += " PRIMARY KEY AUTOINCREMENT";
                 } else {
                     str.push(`  PRIMARY KEY (${pks.join(', ')})`);
                 }
             }
             for (let column in schema[table]) {
-                if (column .endsWith("___")) continue;
+                if (column.endsWith("___")) continue;
                 if ('fk' in schema[table][column]) {
                     if (dependencies.indexOf(schema[table][column].fk.table) == -1) {
                         if (table == schema[table][column].fk.table) continue;
@@ -1059,7 +1075,7 @@ const editorMergeUtils = (() => {
                 }
             }
             if ("checks___" in schema[table]) {
-                for(let i=0; i<schema[table].checks___.length; i++) {
+                for (let i = 0; i < schema[table].checks___.length; i++) {
                     str.push(`  CHECK(${schema[table].checks___[i]})`);
                 }
             }
@@ -1121,6 +1137,7 @@ const editorMergeUtils = (() => {
 
     return {
         LOCALSETKO, LOCALSETOK, LOCALUNSET, REMOTESETKO, REMOTESETOK, REMOTEUNSET, CONFLICTSETLOCAL, CONFLICTSETREMOTE, CONFLICTUNSET, NEUTRAL,
+        CHECKLOCAL, CHECKREMOTE,
         clearRenamedTable, clearSelections, hasUnset, diffSchemas, diffToActions, resolveSchema, updateSchema, autoUpdateRemote,
         coldef, sameFK, renameTable, scoreDiffTables, autoUpdateRemote, schemaToSql, defaults
     }

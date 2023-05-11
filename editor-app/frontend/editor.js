@@ -582,6 +582,9 @@ $.SQLEditor = {};
                                         }
                                     }, 1);
                                 },
+                                [`Edit check constraints for table <i>${target.table}</i>...`]: () => {
+                                    editChecks(target.table);
+                                },
                                 "sep": null,
                                 ["Add column..."]: () => {
                                     selected = {};

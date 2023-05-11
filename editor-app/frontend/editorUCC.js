@@ -218,6 +218,11 @@ const editorUCC = function (schema) {
             }
             schema[table][column].fk = { table: fktable, column: fkcolumn };
             diff.push(["deleteFK", table, column]);
+        },
+        setChecks(table, checks) {
+            let ochecks=schema[table].checks___;
+            schema[table].checks___=checks;
+            diff.push(["setChecks", table, ochecks]);
         }
     }
     return self;

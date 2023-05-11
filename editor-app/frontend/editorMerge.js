@@ -2,9 +2,12 @@
 
     const {
         LOCALSETKO, LOCALSETOK, LOCALUNSET, REMOTESETKO, REMOTESETOK, REMOTEUNSET, CONFLICTSETLOCAL, CONFLICTSETREMOTE, CONFLICTUNSET, NEUTRAL,
+        CHECKLOCAL, CHECKREMOTE,
         clearRenamedTable, clearSelections, hasUnset, diffSchemas, diffToActions, resolveSchema, coldef, sameFK, renameTable, scoreDiffTables, autoUpdateRemote
     } = window.editorMergeUtils;
     
+
+
     function mergeUI(local, remote, ondone) {
         function callback() {
             // clean up local
@@ -255,11 +258,11 @@
                     } else if (colors.dummy.conflicts___!==undefined) {
                         setMenu(event, {
                             [`Local schema: accept CHECK`]: () => {
-                                colors[target.table].coords___ == LOCALSETOK;
+                                colors[target.table].coords___ = LOCALSETOK;
                                 //renameTable(target.table, other, schema[target.table].coords___, colors[target.table].coords___ == LOCALSETOK ? REMOTESETOK : LOCALSETOK);
                             },
                             [`External schema: accept CHECK`]:()=>{
-                                colors[target.table].coords___ == REMOTESETOK;
+                                colors[target.table].coords___ = REMOTESETOK;
                                 //clearRenamedTable(schema,colors,target.table);
                             }
                         });
@@ -433,8 +436,8 @@
             },{
                 text: "Proceed...",
                 click() {
-                    let remoteActions = diffToActions(schema, colors, LOCALSETOK, REMOTESETKO, CONFLICTSETLOCAL);
-                    let localActions = diffToActions(schema, colors, REMOTESETOK, LOCALSETKO, CONFLICTSETREMOTE);
+                    let remoteActions = diffToActions(schema, colors, LOCALSETOK, REMOTESETKO, CONFLICTSETLOCAL, CHECKLOCAL);
+                    let localActions = diffToActions(schema, colors, REMOTESETOK, LOCALSETKO, CONFLICTSETREMOTE, CHECKREMOTE);
     
                     if (hasUnset(schema, colors)) {
                         setTimeout(() => {
