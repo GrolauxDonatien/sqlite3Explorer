@@ -10,7 +10,7 @@
 }
 
 .dbop-dialog table>tbody>tr input {
-  width:100%
+  width: 100%
 }
 
 .dbaction-button {
@@ -20,7 +20,7 @@
 }
 
 .dbop-dialog table>tbody>tr canvas {
-  width:100%
+  width: 100%
 }
 
 .dbop-dialog table>tbody>tr:first-child>td:first-child+td {
@@ -79,14 +79,14 @@
 }
 
 .dbquery-dialog .ui-tabs .ui-tabs-panel {
-  padding:0px 0px 0px 6px;
+  padding: 0px 0px 0px 6px;
 }
 
 .dbquery-dialog .runquery {
   float: right;
-    position: absolute;
-    right: 12px;
-    top: 11px;
+  position: absolute;
+  right: 12px;
+  top: 11px;
 }
 
 .dbquery-dialog .ui-tabs+.ui-tabs {
@@ -98,7 +98,7 @@
 }
 
 .ui-dialog .dbquery-dialog .ui-tabs #tab-diag-schema, .ui-dialog .dbquery-dialog .ui-tabs #tab-diag-results, .ui-dialog .dbquery-dialog .ui-tabs #tab-diag-json-results {
-  overflow:overlay;
+  overflow: overlay;
 }
 
 .ui-dialog .dbquery-dialog .ui-tabs+.ui-tabs {
@@ -429,6 +429,7 @@
     -webkit-transform: rotate(0deg);
     transform: rotate(0deg);
   }
+
   100% {
     -webkit-transform: rotate(360deg);
     transform: rotate(360deg);
@@ -440,6 +441,7 @@
     -webkit-transform: rotate(0deg);
     transform: rotate(0deg);
   }
+
   100% {
     -webkit-transform: rotate(360deg);
     transform: rotate(360deg);
@@ -504,8 +506,8 @@
 }
 
 #tab-qvi {
-  padding:0px 0px 0px 0px; 
-  flex-grow:1;
+  padding: 0px 0px 0px 0px;
+  flex-grow: 1;
 }
 
 #questions {
@@ -669,18 +671,42 @@ body {
     background-color: white;
     overflow: hidden;
   }
+
   #print canvas {
     max-width: 100%;
     max-height: 100%;
   }
 }
 
-.noselect, .ui-tabs-nav  {
-  -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none; /* Safari */
-     -khtml-user-select: none; /* Konqueror HTML */
-       -moz-user-select: none; /* Old versions of Firefox */
-        -ms-user-select: none; /* Internet Explorer/Edge */
-            user-select: none; /* Non-prefixed version, currently
+.noselect, .ui-tabs-nav {
+  -webkit-touch-callout: none;
+  /* iOS Safari */
+  -webkit-user-select: none;
+  /* Safari */
+  -khtml-user-select: none;
+  /* Konqueror HTML */
+  -moz-user-select: none;
+  /* Old versions of Firefox */
+  -ms-user-select: none;
+  /* Internet Explorer/Edge */
+  user-select: none;
+  /* Non-prefixed version, currently
                                   supported by Chrome, Edge, Opera and Firefox */
 }
+
+.icon {
+  background: none;
+  border: none;
+}
+
+table.smart tfoot td {
+  text-align: end;
+}
+
+table.smart tbody td {
+  white-space: nowrap;
+}
+
+table.smart tbody tr:nth-child(odd) {
+  background-color: rgb(240, 240, 240);
+} 
