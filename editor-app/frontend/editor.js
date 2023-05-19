@@ -147,259 +147,6 @@ $.SQLEditor = {};
         });
     }
 
-    function editColumn(table, column, def, callback) {
-        let diag = $(`<div title="${column == "" ? "Add" : "Edit"} column"></div>`);
-        let tbl = $('<table>');
-        let tbody = $('<tbody>');
-        tbl.append(tbody);
-        let tr = $('<tr>');
-        tr.append('<td><label>Name:</label></td>');
-        let name = $('<input>');
-        name.val(def.name);
-        tr.append($('<td>').append(name));
-        name.focus();
-        name.on('keydown', (event) => {
-            if (event.key.length == 1 && validChars.indexOf(event.key) == -1) {
-                warning("Invalid key (letters and _ only)");
-                event.preventDefault();
-                event.stopPropagation();
-            }
-        });
-        tbody.append(tr);
-        tr = $('<tr>');
-        tr.append('<td><label>Type:</label></td>');
-        let type = $('<select>');
-        tr.append($('<td>').append(type));
-        tbody.append(tr);
-        let opts = [];
-        for (let k in types) {
-            for (let n in types[k]) {
-                for (let i = 0; i < types[k][n].length; i++) {
-                    opts.push({ t: types[k][n][i], n });
-                }
-            }
-        }
-        opts.sort((a, b) => { return a.t.localeCompare(b.t); });
-        for (let i = 0; i < opts.length; i++) {
-            let opt = $(`<option value="${opts[i].t}" data-args="${opts[i].n}">`);
-            opt.text(opts[i].t);
-            type.append(opt);
-        }
-        let pk = $('<input type="checkbox">');
-        let auto = $('<input type="checkbox">');
-        let notnull = $('<input type="checkbox">');
-        type.on('change', function () {
-            let n = parseInt(type.find(':selected').attr('data-args'));
-            if (isNaN(n)) n = 0;
-            type.parent().contents().filter((i, el) => i != 0).remove();
-            let boundKeys = Object.keys(def.bounds);
-            for (let i = 0; i < n; i++) {
-                if (i == 0) {
-                    type.parent().append('(');
-                } else {
-                    type.parent().append(',');
-                }
-                let input = $('<input class="coldefnumber" type="number" minimum="0">');
-                if (def.type == type.val()) {
-                    input.val(def.bounds[boundKeys[i]]);
-                } else {
-                    input.val(0);
-                }
-                type.parent().append(input);
-                if (i == n - 1) type.parent().append(')');
-            }
-            auto.prop('checked', type.val() == "integer" && pk.prop('checked'));
-            if (pk.prop('checked')) notnull.prop('checked');
-        });
-        type.val(def.type);
-        type.trigger('change');
-        tr = $('<tr>');
-        tr.append('<td><label>Primary Key:</label></td>');
-        pk.prop('checked', def.pk);
-        tr.append($('<td>').append(pk));
-        tbody.append(tr);
-        tr = $('<tr>');
-        tr.append('<td><label>Unique:</label></td>');
-        let unique = $('<input type="checkbox">');
-        unique.prop('checked', def.unique);
-        tr.append($('<td>').append(unique));
-        tbody.append(tr);
-        tr = $('<tr>');
-        tr.append('<td><label>Not null:</label></td>');
-        notnull.prop('checked', !def.nullable);
-        tr.append($('<td>').append(notnull));
-        tbody.append(tr);
-        tr = $('<tr>');
-        tr.append('<td><label>Auto generated:</label></td>');
-        auto.prop('checked', def.auto);
-        tr.append($('<td>').append(auto));
-        tbody.append(tr);
-
-        diag.append(tbl);
-
-        auto.prop('disabled', true);
-        pk.on('change', () => {
-            if (pk.prop('checked')) {
-                unique.prop('checked', true);
-                unique.prop('disabled', true);
-                auto.prop('checked', type.val() == 'integer');
-                notnull.prop('checked', true);
-                notnull.prop('disabled', true);
-            } else {
-                unique.prop('disabled', false);
-                notnull.prop('disabled', false);
-                auto.prop('checked', false);
-            }
-        });
-
-        pk.trigger('change');
-
-        function add(onadded) {
-            if (name.val().trim() == "") {
-                warning("Name is mandatory");
-                return;
-            }
-            let str = type.val();
-            let sub = type.parent().contents().filter((i, el) => i != 0);
-            sub.each((i, el) => str += (i % 2 == 0 ? $(el).text() : $(el).val()));
-
-            $.SQLEditor.internalTypeToType(str, (s) => {
-                s.name = name.val();
-                s.nullable = !notnull.prop('checked');
-                s.auto = auto.prop('checked');
-                s.pk = pk.prop('checked');
-                s.unique = unique.prop('checked');
-                if ("fk" in def) s.fk = def.fk;
-                if (onadded) onadded();
-                callback(s);
-            });
-
-        }
-
-        diag.dialog({
-            dialogClass: "no-close",
-            modal: true,
-            minHeight: 120,
-            maxHeight: 600,
-            minWidth: 640,
-            buttons: [{
-                text: "Ok",
-                click: function () {
-                    add(() => {
-                        diag.dialog("close");
-                        diag.remove();
-                    });
-                }
-            }, {
-                text: "Ok & Add another column...",
-                click: function () {
-                    add(() => {
-                        diag.dialog("close");
-                        diag.remove();
-                        editColumn(table, column, def, callback);
-                    });
-                }
-            }, {
-                text: "Cancel",
-                click: function () {
-                    diag.dialog("close");
-                    diag.remove();
-                }
-            }]
-        });
-    }
-
-    function addColumn(table) {
-        function callback(def) {
-            if (def.name in schema[table]) {
-                error(`Column ${def.name} already exists.`);
-                editColumn(table, def.name, def, callback);
-            } else {
-                ucc.diff(() => {
-                    ucc.addColumn(table, def);
-                })
-                conf.schemaUI.redraw();
-            }
-        }
-        editColumn(table, "", {
-            "name": "",
-            "nullable": false,
-            "auto": false,
-            "pk": false,
-            "unique": false,
-            "internalType": "INTEGER",
-            "type": "integer",
-            "bounds": {},
-            "format": "number"
-        }, callback);
-    }
-
-    function editChecks(table) {
-        let checks = JSON.parse(JSON.stringify(schema[table].checks___ || []));
-        let diag = $(`<div title="Edit check constraints of ${table}"></div>`);
-        let tbl = $('<table>');
-        let tbody = $('<tbody>');
-        tbl.append(tbody);
-        diag.append(tbl);
-        for (let i = 0; i < checks.length; i++) {
-            let tr = $('<tr>');
-            tbody.append(tr);
-            let td = $('<td>');
-            tr.append(td);
-            let input = $('<input>');
-            td.append(input);
-            td = $('<td>');
-            tr.append(td);
-            input.val(checks[i]);
-            //            checkTr(tr);
-        }
-        let tr = $('<tr>');
-        tbody.append(tr);
-        let td = $('<td>');
-        tr.append(td);
-        let input = $('<input>');
-        td.append(input);
-        tbody.on('change', 'input', (event) => {
-            if (event.target.value == "") {
-                event.target.parentElement.parentElement.remove();
-            }
-            // always check for an empty last line
-            let tr = tbody.find('tr:last');
-            if (tr.length == 0 || tr.find('input').val() != "") {
-                let tr = $('<tr>');
-                tbody.append(tr);
-                let td = $('<td>');
-                tr.append(td);
-                let input = $('<input>');
-                td.append(input);
-            }
-        });
-
-        diag.dialog({
-            dialogClass: "no-close",
-            modal: true,
-            minHeight: 120,
-            maxHeight: 600,
-            minWidth: 640,
-            buttons: [{
-                text: "Ok",
-                click: function () {
-                    let checks = [];
-                    tbody.find('input').each((_, el) => { if (el.value != "") checks.push(el.value) });
-                    schema[table].checks___ = checks;
-                    diag.dialog("close");
-                    diag.remove();
-                }
-            }, {
-                text: "Cancel",
-                click: function () {
-                    diag.dialog("close");
-                    diag.remove();
-                }
-            }]
-        });
-    }
-
     function editStructure(table) {
         function keydown(event) {
             if (event.key.length == 1 && validChars.indexOf(event.key) == -1) {
@@ -414,7 +161,12 @@ $.SQLEditor = {};
 
         p1.find('button').on('click', async () => {
             if (confirm("Do you want to delete " + table + " ?")) {
-                debugger;
+                ucc.diff(() => {
+                    ucc.deleteTable(table);
+                    conf.schemaUI.redraw();
+                    diag.dialog("close");
+                    diag.remove();
+                });
             };
         });
         p1.find('input').on('keydown', keydown);
@@ -693,6 +445,10 @@ $.SQLEditor = {};
                     }
                     for (let i = 0; i < checks.length; i++) {
                         try {
+                            if (checks[i].trim()=="") {
+                                warning("Empty CHECK constraint.");
+                                return;
+                            }
                             let tree = window.parsers.parseWhere(checks[i]);
                             check(tree);
                         } catch (e) {
@@ -847,112 +603,18 @@ $.SQLEditor = {};
                             $.SQLEditor.menuModel(target, menu);
                             setMenu(menu);
                         }
-                    } else /*if ("column" in target) {
-                        if ((target.table in schema) && (target.column in schema[target.table])) { // sanity check
-                            function editCallback(def) {
-                                try {
-                                    ucc.diff(() => {
-                                        ucc.editColumn(target.table, target.column, def);
-                                    });
-                                } catch (e) {
-                                    error(e.message);
-                                    editColumn(target.table, target.column, def, editCallback);
-                                    return;
-                                }
-                                selected = {};
-                                conf.schemaUI.redraw();
-                            }
+                    } else if ("table" in target) {
+                        if (target.table in schema) { // sanity check
                             let menu = {
-                                [`Rename column <i>${target.column}</i>...`]: () => {
-                                    event = mutate(event);
-                                    event.which = 1;
-                                    self.select(target, event);
-                                },
-                                [`Edit column <i>${target.column}</i>...`]: () => {
+                                [`Change structure of <i>${target.table}</i>...`]: () => {
+                                    editStructure(target.table);
                                     selected = {};
-                                    editColumn(target.table, target.column, schema[target.table][target.column], editCallback);
-                                }, [`Delete column ${target.column}...`]: () => {
-                                    setTimeout(() => {
-                                        if (confirm(`Delete column ${target.table}.${target.column} ?`)) {
-                                            try {
-                                                ucc.diff(() => {
-                                                    ucc.deleteColumn(target.table, target.column);
-                                                })
-                                            } catch (e) {
-                                                error(e.message);
-                                            }
-                                            conf.schemaUI.redraw();
-                                        }
-                                    }, 1);
-                                }, "sep1": null,
-                                [`Rename table <i>${target.table}</i>...`]: () => {
-                                    event = mutate(event);
-                                    event.which = 1;
-                                    delete target.column;
-                                    self.select(target, event);
-                                },
-                                [`Delete table <i>${target.table}</i>...`]: () => {
-                                    setTimeout(() => {
-                                        if (confirm(`Delete table ${target.table} ?`)) {
-                                            try {
-                                                ucc.diff(() => {
-                                                    ucc.deleteTable(target.table);
-                                                });
-                                            } catch (e) {
-                                                error(e.message);
-                                            }
-                                            conf.schemaUI.redraw();
-                                        }
-                                    }, 1);
-                                },
-                                [`Edit check constraints for table <i>${target.table}</i>...`]: () => {
-                                    editChecks(target.table);
-                                },
-                                "sep2": null,
-                                [`Add column...`]: () => {
-                                    selected = {};
-                                    addColumn(target.table);
                                 }
                             };
                             $.SQLEditor.menuModel(target, menu);
                             setMenu(menu);
                         }
-                    } else */ if ("table" in target) {
-                            if (target.table in schema) { // sanity check
-                                let menu = {
-                                    /*                                [`Rename table <i>${target.table}</i>...`]: () => {
-                                                                        event = mutate(event);
-                                                                        event.which = 1;
-                                                                        self.select(target, event);
-                                                                    },
-                                                                    [`Delete table <i>${target.table}</i>...`]: () => {
-                                                                        setTimeout(() => {
-                                                                            if (confirm(`Delete table ${target.table} ?`)) {
-                                                                                try {
-                                                                                    ucc.diff(() => {
-                                                                                        ucc.deleteTable(target.table);
-                                                                                    });
-                                                                                } catch (e) { error(e.message); }
-                                                                                conf.schemaUI.redraw();
-                                                                            }
-                                                                        }, 1);
-                                                                    },
-                                                                    [`Edit check constraints for table <i>${target.table}</i>...`]: () => {
-                                                                        editChecks(target.table);
-                                                                    },
-                                                                    "sep": null,
-                                                                    ["Add column..."]: () => {
-                                                                        selected = {};
-                                                                        addColumn(target.table);
-                                                                    }*/
-                                    [`Change structure of <i>${target.table}</i>...`]: () => {
-                                        editStructure(target.table);
-                                    }
-                                };
-                                $.SQLEditor.menuModel(target, menu);
-                                setMenu(menu);
-                            }
-                        }
+                    }
                 }
             },
             isSelected(target) {

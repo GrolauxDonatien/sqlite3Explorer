@@ -871,7 +871,7 @@ const editorMergeUtils = (() => {
             } else {
                 colors[other][c] = { coords___: LOCALUNSET };
             }
-            if ("fk" in schema[other][c]) {
+            if ((c in schema[other]) && ("fk" in schema[other][c])) {
                 colors[other][c].fk = { coords___: colors[other][c].coords___ };
             }
         }
@@ -1074,7 +1074,7 @@ const editorMergeUtils = (() => {
                     str.push(`  FOREIGN KEY (${column}) REFERENCES ${schema[table][column].fk.table} (${schema[table][column].fk.column})`)
                 }
             }
-            if ("checks___" in schema[table]) {
+            if (schema[table] && ("checks___" in schema[table])) {
                 for (let i = 0; i < schema[table].checks___.length; i++) {
                     str.push(`  CHECK(${schema[table].checks___[i]})`);
                 }
