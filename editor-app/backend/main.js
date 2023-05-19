@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 
-const DEBUG = true;
+const DEBUG = false;
 const APP = __dirname + "/../frontend/editor.html";
 const QUERY = __dirname + "/../frontend/query.html";
 const CONSOLE = __dirname + "/../frontend/console.html";
@@ -10,7 +10,7 @@ const sqlite3 = require("../../common-backend/bettersqlite3adapter");
 const fs = require('fs');
 const fspath = require('path');
 const LIMIT = 1000;
-const VERSION = "1.0.31";
+const VERSION = "1.0.32";
 const os = require('os');
 require('@electron/remote/main').initialize()
 
