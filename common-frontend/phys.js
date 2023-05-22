@@ -13,6 +13,7 @@
                 throw new Exception("Invalid parameter for canvas");
             }
 
+            const STARTBRAKEDELAY = config.startBrakeDelay || 1000;
             // number of pixels tolerated for a click between mousedown and mouseup, otherwise this a drag
             const DOTCLICKPRECISION = config.dotClickPrecision || 4;
             config.dotClickPrecision = DOTCLICKPRECISION;
@@ -65,7 +66,7 @@
             let previousTs;
             let init = false;
             let forceBoundaryCheck = false;
-
+            let brakeDelay = STARTBRAKEDELAY;
 
             function drawModel(model) {
                 // show stuff
@@ -236,6 +237,8 @@
                 let locked = false;
                 let touched = false;
 
+                brakeDelay-=elapsed;
+
                 function assert(i) {
                     if (vectors[i] == undefined) {
                         vectors[i] = { x: 0, y: 0 };
@@ -389,6 +392,14 @@
                             }
                         }
                     }
+                    if (e.lock || e._lock) brakeDelay=STARTBRAKEDELAY;
+                }
+
+                let brake=1.0;
+                if (brakeDelay<=0) {
+                    brake=0.0;
+                } else if (brakeDelay<=1000) {
+                    brake=brakeDelay/1000.0;
                 }
 
                 for (let i = 0; i < model.length; i++) {
@@ -491,7 +502,7 @@
                         v.x = v.x * m / d;
                         v.y = v.y * m / d;
                     }
-                    let brake;
+/*                    let brake;
                     if ("prev" in mod) {
                         brake=mod.prev.b;
                         let sx=mod.prev.x;
@@ -508,7 +519,11 @@
                     mod.old = { x: mod.x, y: mod.y, b: brake };
                     mod.x += v.x * brake;
                     mod.y += v.y * brake;
-                    mod.prev={x:v.x,y:v.y,b:brake};
+                    mod.prev={x:v.x,y:v.y,b:brake};*/
+                    mod.old = { x: mod.x, y: mod.y, };
+                    mod.x += v.x*brake;
+                    mod.y += v.y*brake;
+                    mod.prev={x:v.x,y:v.y};
                 }
                 for (let i in (forceBoundaryCheck ? model : vectors)) {
                     let mod = model[i];
