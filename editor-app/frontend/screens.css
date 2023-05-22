@@ -1,3 +1,18 @@
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin: unset;
+}
+
+div.middle {
+  flex-grow:1;
+}
+
+div.nav0 {
+  padding: 8px 8px 8px 8px;
+}
+
 table {
   margin-top: 5px;
   margin-bottom: 5px;
@@ -13,8 +28,6 @@ table input, table select, table textarea {
   width: 100%;
   min-width: 400px;
 }
-
-
 
 .nav input {
   width: 75px;
@@ -55,8 +68,12 @@ table input[type="checkbox"] {
   display:flex;
   width:100%;
   justify-content: space-between;
+  padding-bottom: 8px;
+  padding-top: 8px;
 }
 
 .action button {
   padding: 5px 5px 5px 5px;
+  margin-left: 8px;
+  margin-right: 8px;
 }

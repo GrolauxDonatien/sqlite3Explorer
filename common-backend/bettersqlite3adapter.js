@@ -320,7 +320,7 @@ function buildFields(qfields) {
     return fields;
 }
 
-async function execDB(file, sql) {
+async function execDB(file, sql,args=[]) {
     return new Promise((resolve, reject) => {
         try {
             let ret = null;
@@ -342,7 +342,7 @@ async function execDB(file, sql) {
                 }
                 let rows = null;
                 try {
-                    rows = stmt.all();
+                    rows = stmt.all.apply(stmt, args);
                     query = true;
                 } catch (e) {
                     query = false;

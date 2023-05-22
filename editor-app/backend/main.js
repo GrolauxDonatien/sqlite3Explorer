@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 
-const DEBUG = false;
+const DEBUG = true;
 const APP = __dirname + "/../frontend/editor.html";
 const QUERY = __dirname + "/../frontend/query.html";
 const CONSOLE = __dirname + "/../frontend/console.html";
@@ -784,7 +784,7 @@ ipcMain.on('asynchronous-message', (event, arg) => {
                     arg.error = "Unsupported DB Engine " + arg.adapter;
                     event.sender.send("main", arg);
                 } else {
-                    engine.execDB(arg.file, arg.exec).then((results) => {
+                    engine.execDB(arg.file, arg.exec, arg.args||[]).then((results) => {
                         arg.action = "execResults";
                         arg.results = results;
                         event.sender.send("main", arg);
