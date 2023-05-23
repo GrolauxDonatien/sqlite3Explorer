@@ -1,16 +1,16 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 
-const DEBUG = true;
+const DEBUG = false;
 const APP = __dirname + "/../frontend/editor.html";
 const QUERY = __dirname + "/../frontend/query.html";
 const CONSOLE = __dirname + "/../frontend/console.html";
 const EDITTABLE = __dirname + "/../frontend/table.html";
 const EDITTUPLES = __dirname + "/../frontend/screens.html";
-const sqlite3 = require("../../common-backend/bettersqlite3adapter");
+const sqlite3 = require("../../common-backend/sqlite3adapter");
 const fs = require('fs');
 const fspath = require('path');
 const LIMIT = 1000;
-const VERSION = "1.0.33";
+const VERSION = "1.0.35";
 const os = require('os');
 require('@electron/remote/main').initialize()
 
@@ -426,7 +426,7 @@ function sameColumn(col1, col2) {
 function sameTableSchema(table1, table2) {
     if (table1 == undefined || table2 == undefined) return false;
     for (let k in table1) {
-        if (k .endsWith("___")) continue;
+        if (k.endsWith("___")) continue;
         if (!(k in table2)) return false;
         if (!sameColumn(table1[k], table2[k])) return false;
     }
@@ -436,7 +436,7 @@ function sameTableSchema(table1, table2) {
     return true;
 }
 
-ipcMain.on('asynchronous-message', (event, arg) => {
+ipcMain.on('asynchronous-message', async (event, arg) => {
     function sendError(err) {
         arg.action = "error";
         arg.error = {
@@ -784,15 +784,16 @@ ipcMain.on('asynchronous-message', (event, arg) => {
                     arg.error = "Unsupported DB Engine " + arg.adapter;
                     event.sender.send("main", arg);
                 } else {
-                    engine.execDB(arg.file, arg.exec, arg.args||[]).then((results) => {
+                    try {
+                        let results = await engine.execDB(arg.file, arg.exec, arg.args || []);
                         arg.action = "execResults";
                         arg.results = results;
                         event.sender.send("main", arg);
-                    }, (err) => {
+                    } catch (err) {
                         arg.action = "connectError";
                         arg.error = err.message;
                         event.sender.send("main", arg);
-                    });
+                    }
                 }
                 break;
             case "batch":
@@ -802,7 +803,7 @@ ipcMain.on('asynchronous-message', (event, arg) => {
                     arg.error = "Unsupported DB Engine " + arg.adapter;
                     event.sender.send("main", arg);
                 } else {
-                    engine.connect({ adapter: arg.adapter, file: arg.file, readwrite: true }).then((db) => {
+                    engine.connect({ adapter: arg.adapter, file: arg.file, readwrite: true }).then(async (db) => {
                         try {
                             let results = [];
                             for (let i = 0; i < arg.operations.length; i++) {
@@ -831,20 +832,19 @@ ipcMain.on('asynchronous-message', (event, arg) => {
                                         }
                                     }
                                     try {
-                                        let update = db.direct.prepare(sql + where);
-                                        let select = db.direct.prepare(`SELECT * FROM ${arg.table}${where}`);
-                                        select.raw(false);
-                                        db.direct.transaction(() => {
-                                            let info = update.run.apply(update, params);
+                                        let update = db.prepare(sql + where);
+                                        let select = db.prepare(`SELECT * FROM ${arg.table}${where}`);
+                                        await db.transaction(async () => {
+                                            let info = await update.run.apply(update, params);
                                             if (info.changes) {
                                                 op.success = true;
-                                                let row = select.get.apply(select, wparams);
+                                                let row = await select.get.apply(select, wparams);
                                                 op.tuple = row;
                                             } else {
                                                 op.success = false;
                                                 op.error = "This tuple does not exist anymore.";
                                             }
-                                        })();
+                                        });
                                     } catch (err) {
                                         op.success = false;
                                         op.error = err.message;
@@ -859,11 +859,11 @@ ipcMain.on('asynchronous-message', (event, arg) => {
                                         params.push(op.delete[k]);
                                     }
                                     try {
-                                        let del = db.direct.prepare(sql);
-                                        db.direct.transaction(() => {
-                                            del.run.apply(del, params);
+                                        let del = db.prepare(sql);
+                                        await db.transaction(async () => {
+                                            await del.run.apply(del, params);
                                             op.success = true; // as long as there is no exception, the tuple is not there anymore
-                                        })();
+                                        });
                                     } catch (err) {
                                         op.success = false;
                                         op.error = err.message;
@@ -900,30 +900,32 @@ ipcMain.on('asynchronous-message', (event, arg) => {
                                         sel += ` AND ${op.pks[i]}=?`;
                                     }
                                     try {
-                                        let insert = db.direct.prepare(sql);
+                                        let insert = db.prepare(sql);
                                         let pks = [];
                                         for (let i = 0; i < getpks.length; i++) {
-                                            pks[i] = db.direct.prepare(getpks[i]);
-                                            pks[i].raw(true);
+                                            pks[i] = db.prepare(getpks[i]);
                                         }
-                                        let select = db.direct.prepare(sel);
-                                        select.raw(false);
-                                        db.direct.transaction(() => {
-                                            let info = insert.run.apply(insert, params);
+                                        let select = db.prepare(sel);
+                                        await db.transaction(async () => {
+                                            let info = await insert.run.apply(insert, params);
                                             if (info.changes) {
                                                 op.success = true;
                                                 let pkvs = [];
                                                 for (let i = 0; i < pks.length; i++) {
-                                                    pkvs.push(pks[i].get.apply(pks[i], wparams)[0]);
+                                                    let pk = await pks[i].get.apply(pks[i], wparams);
+                                                    for (k in pk) {
+                                                        pkvs.push(pk[k]);
+                                                        break;
+                                                    }
                                                 }
-                                                wparams.push.apply(wparams, pkvs);
-                                                let row = select.get.apply(select, wparams);
+                                                await wparams.push.apply(wparams, pkvs);
+                                                let row = await select.get.apply(select, wparams);
                                                 op.tuple = row;
                                             } else {
                                                 op.success = false;
                                                 op.error = "This tuple does not exist anymore.";
                                             }
-                                        })();
+                                        });
                                     } catch (err) {
                                         op.success = false;
                                         op.error = err.message;
@@ -933,11 +935,14 @@ ipcMain.on('asynchronous-message', (event, arg) => {
                             delete arg.operations;
                             arg.results = results;
                             event.sender.send("main", arg);
-                            db.disconnect();
                         } catch (err) {
                             arg.action = "error";
                             arg.error = err.message;
                             event.sender.send("main", arg);
+                        } finally {
+                            try {
+                                db.disconnect();
+                            } catch (_) {}
                         }
                     }, (err) => {
                         arg.action = "connectError";

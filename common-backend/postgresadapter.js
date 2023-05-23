@@ -1,3 +1,5 @@
+// deprecated
+
 const { Connection, types: PGTypes, Pool } = require('pg');
 
 async function connect(conf) {

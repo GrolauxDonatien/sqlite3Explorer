@@ -1,86 +1,15 @@
+/* 
+* this adapter is working fine, however 
+* - better-sqlite3 needs to be compiled, which requires extra work,
+* - better-sqlite3 is not precompiled for Mac OSX arm64 for electron-builder, preventing from creating installer if you don't have an access to this platform (my case)
+*
+*/
+
 const sqlite3 = require('better-sqlite3');
+const {
+    toJSType, types, internalTypeToType, buildFields
+} = require('./sqliteutils');
 
-function toJSType(type) {
-    switch (type) {
-        case "int":
-        case "integer":
-        case "numeric":
-        case "smallint":
-        case "double precision":
-        case "decimal":
-        case "double":
-        case "float":
-        case "bigint":
-        case "int2":
-        case "int8":
-        case "mediumint":
-        case "real":
-        case "tinyint":
-        case "unsigned bit int":
-            return 'number';
-        case "character":
-        case "nvarchar":
-        case "character varying":
-        case "text":
-        case "native character":
-        case "nchar":
-        case "varchar":
-        case "character varying":
-            return "string";
-        case "boolean":
-        case "bit":
-            return "boolean";
-        case "datetime":
-        case "timestamp without time zone":
-            return "datetime";
-        default:
-            if (type.indexOf("date") !== -1) {
-                return "date";
-            } else {
-                return "unknown";
-            }
-    }
-}
-
-const types = {
-    "integer": { 0: ["int", "integer", "tinyint", "smallint", "mediumint", "bigint", "unsigned bit int", "int2", "int8"] },
-    "text": {
-        0: ["text", "clob"],
-        1: ["character", "varchar", "character varying", "nchar", "native character", "nvarchar"]
-    },
-    "blob": { 0: ["blob"] },
-    "real": { 0: ["real", "double", "double precision", "float"] },
-    "numeric": { 0: ["numeric", "boolean", "date", "datetime"], 2: ["decimal"] }
-}
-
-function internalTypeToType(internal) {
-    let f = { internalType: internal };
-    let idx = internal.indexOf("(");
-    if (idx != -1) {
-        f.type = internal.substring(0, idx).toLowerCase();
-        let bounds = internal.substring(idx + 1, internal.length - 1).split(',');
-        if (bounds.length == 1) {
-            f.bounds = { length: parseInt(bounds[0]) }
-        } else {
-            let o = {};
-            let total = 0;
-            for (let i = 0; i < bounds.length; i++) {
-                let k = "slice_" + i;
-                let v = parseInt(bounds[i]);
-                o[k] = v;
-                total += v;
-            }
-            o.length = total;
-            f.bounds = o;
-        }
-
-    } else {
-        f.type = internal.toLowerCase();
-        f.bounds = {};
-    }
-    f.format = toJSType(f.type);
-    return f;
-}
 
 async function connect(conf) {
 
@@ -152,11 +81,11 @@ async function connect(conf) {
                         };
                     }
                 }
-                for(let k in tables) {
-                    let checks=await getCheckConstraints(k);
-//                    if (checks.length>0) {
-                        tables[k].checks___=checks;
-//                    }
+                for (let k in tables) {
+                    let checks = await getCheckConstraints(k);
+                    //                    if (checks.length>0) {
+                    tables[k].checks___ = checks;
+                    //                    }
                 }
                 resolve(tables);
             } catch (e) {
@@ -167,17 +96,17 @@ async function connect(conf) {
 
     async function getCheckConstraints(table) {
         if (db == null) throw new Error("DB not connected");
-        return new Promise((resolve, reject)=>{
+        return new Promise((resolve, reject) => {
             try {
                 let stmt = db.prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name=?`);
                 let create = stmt.get(table);
-                let sql=create.sql.trim();
-                sql=sql.substring(0,sql.length-1); // drop last ) that may break the regexp
-                let constraints=[...sql.matchAll(/\b[cC][hH][eE][cC][kK]\s*\((.+)\)/g)]
-                let ret=[];
-                for(let i=0; i<constraints.length; i++) {
-                    let c=constraints[i];
-                    ret.push(c[c.length-1]);
+                let sql = create.sql.trim();
+                sql = sql.substring(0, sql.length - 1); // drop last ) that may break the regexp
+                let constraints = [...sql.matchAll(/\b[cC][hH][eE][cC][kK]\s*\((.+)\)/g)]
+                let ret = [];
+                for (let i = 0; i < constraints.length; i++) {
+                    let c = constraints[i];
+                    ret.push(c[c.length - 1]);
                 }
                 resolve(ret);
             } catch (e) {
@@ -282,45 +211,7 @@ async function updateDB(file, sql) {
     });
 }
 
-function buildFields(qfields) {
-    let fields = [];
-    for (let i = 0; i < qfields.length; i++) {
-        let f = {};
-        let idx = qfields[i].type == null ? -1 : qfields[i].type.indexOf("(");
-        if (idx != -1) {
-            f.internalType = qfields[i].type.substring(0, idx).toLowerCase();
-            let bounds = qfields[i].type.substring(idx + 1, qfields[i].type.length - 1).split(',');
-            if (bounds.length == 1) {
-                f.bounds = { length: parseInt(bounds[0]) }
-            } else {
-                let o = {};
-                let total = 0;
-                for (let i = 0; i < bounds.length; i++) {
-                    let k = "slice_" + i;
-                    let v = parseInt(bounds[i]);
-                    o[k] = v;
-                    total += v;
-                }
-                o.length = total;
-                f.bounds = o;
-            }
-
-        } else {
-            f.internalType = qfields[i].type == null ? "number" : qfields[i].type.toLowerCase(); // null type for aggregate functions => they express numbers
-            f.bounds = {};
-        }
-        f.type = toJSType(f.internalType);
-        fields.push({
-            name: qfields[i].name,
-            internal: qfields[i],
-            internalType: f.internalType,
-            format: f
-        })
-    }
-    return fields;
-}
-
-async function execDB(file, sql,args=[]) {
+async function execDB(file, sql, args = []) {
     return new Promise((resolve, reject) => {
         try {
             let ret = null;

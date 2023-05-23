@@ -1,3 +1,5 @@
+// deprecated
+
 const mysql = require('mysql');
 
 
