@@ -111,7 +111,7 @@ function showTuple() {
                                 q.file=conf.file;
                                 ipcAjax(q,(result)=>{
                                     let opts=[];
-                                    if (start==0 && info.null) {
+                                    if (start==0 && info.nullable) {
                                         opts.push({[info.fk.column]:null,text:"NULL"});
                                     }
                                     for(let i=0; i<result.results.rows.length; i++) {
@@ -169,7 +169,7 @@ function showTuple() {
                         input.attr('type', 'number');
                         break;
                 }
-                if (tuple[i]) input.val(tuple[i]);
+                if (tuple[i]!=null) input.val(tuple[i]);
                 td.append(input);
             }
             tr.append(td);
@@ -274,9 +274,10 @@ $('#cancel').on('click', () => {
 
 $('#delete').on('click', () => {
     if (inerror) {
-        error('Cannot save while there is an error.');
+        error('Cannot delete while there is an error.');
         return;
     }
+    if (!confirm("Are you sure you want to delete this entry ?")) return;
     if (current == total) {
         current = 0;
         showTuple();
@@ -284,7 +285,7 @@ $('#delete').on('click', () => {
     }
     // gather data
     let pk = {};
-    let inputs = $('table input, table select');
+    let inputs = $('table td>input, table td>select');
     let i = 0;
     for (let f in schema) {
         let el = inputs[i];
@@ -342,7 +343,7 @@ $('#save').on('click', () => {
     // gather data
     let tuple = {};
     let pk = {};
-    let inputs = $('table input, table select');
+    let inputs = $('table td>input, table td>select');
     let i = 0;
     for (let f in schema) {
         let el = inputs[i];
@@ -408,7 +409,6 @@ $('#save').on('click', () => {
                 let op = response.results[i];
                 if (!op.success) {
                     error(op.error);
-                    showTuple();
                     return;
                 }
             }
@@ -422,7 +422,6 @@ $('#save').on('click', () => {
         }
     }, (msg) => {
         error(msg);
-        showTuple();
     })
 })
 

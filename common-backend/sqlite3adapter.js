@@ -217,8 +217,9 @@ async function connect(conf) {
     return new Promise((resolve, reject) => {
         try {
             db = new sqlite3.Database(conf.file, (conf.readwrite ? sqlite3.OPEN_READWRITE : sqlite3.OPEN_READONLY),
-                (err) => {
+                async (err) => {
                     if (err == null) {
+                        await promise(db, "exec", "PRAGMA foreign_keys = ON;");
                         resolve({ createDBModel, connect, disconnect, query: queryDB, prepare, transaction, types, internalTypeToType, getCheckConstraints });
                     } else {
                         reject(err);
@@ -265,6 +266,7 @@ async function updateDB(file, sql) {
                         reject(err);
                     } else {
                         try {
+                            await promise(db, "exec", "PRAGMA foreign_keys = ON;");
                             await promise(db, "exec", sql);
                             resolve();
                         } catch (e) {
@@ -282,6 +284,25 @@ async function updateDB(file, sql) {
     });
 }
 
+function inject(sql, args) {
+    // this is unsafe : resolve a parametrised statement injecting the values directly.
+    // A proper solution would be to parse the statement, identify the ? and insert the values safely.
+    // However, due to the use case of this application, this simple solution is good enough.
+    let parts=sql.split('?');
+    let ret=[];
+    for(let i=0; i<args.length; i++) {
+        ret.push(parts[i]);
+        if (args[i]==null) {
+            ret.push('NULL');
+        } else if (typeof args[i]=="string" || (args[i] instanceof String)) {
+            ret.push("'"+args[i].split("'").join("''")+"'");
+        } else {
+            ret.push(args[i]);
+        }
+    }
+    return ret.join('');
+}
+
 async function execDB(file, sql, args = []) {
     return new Promise((resolve, reject) => {
         try {
@@ -291,18 +312,25 @@ async function execDB(file, sql, args = []) {
                         reject(e);
                     } else {
                         try {
+                            await promise(db, "exec", "PRAGMA foreign_keys = ON;");
                             await promise(db, "run", 'BEGIN TRANSACTION');
                             let query = false;
                             let orows = [];
                             let qfields = [];
                             try {
-                                await promise(db, "run", "CREATE TEMP VIEW query__tmp AS " + sql, args);
-                                query = true;
-                            } catch (_) { };
+                                if (args.length==0) {
+                                    await promise(db, "run", "CREATE TEMP VIEW query__tmp AS " + sql, args);
+                                } else {
+                                    await promise(db, "run", "CREATE TEMP VIEW query__tmp AS " + inject(sql, args));
+                                }
+                                query = true;    
+                            } catch (_) { 
+                                console.log(_);
+                            };
                             if (query) {
                                 qfields = await promise(db, "all", "PRAGMA table_info(query__tmp)");
                                 await promise(db, "run", "DROP VIEW query__tmp");
-                                orows = await promise(db, "all", sql);
+                                orows = await promise(db, "all", sql, args);
                                 await promise(db, "run", "COMMIT");
                                 let fields = buildFields(qfields);
                                 let rows = toArray(orows, fields);
