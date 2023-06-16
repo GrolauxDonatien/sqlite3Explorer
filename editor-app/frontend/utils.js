@@ -112,9 +112,13 @@ function smartTable({ root, refresh, columns, onadd, filter, buttons }) {
                 td.innerHTML = col.render(row);
             }
             if ("onedit" in col) {
-                td.setAttribute("contenteditable", "true");
-                td.setAttribute("data-value", td.innerHTML); //memoize content of td
-                td.addEventListener('input', (event) => {
+                let input=document.createElement("INPUT");
+                input.value=td.innerText;
+                td.innerText="";
+                td.setAttribute("class","editable");
+                td.appendChild(input);
+                td.setAttribute("data-value", td.innerText); //memoize content of td
+                input.addEventListener('input', (event) => {
                     if (td.innerHTML.indexOf("<br>") != -1 && !ISFIREFOX) {
                         // on mobile chrome brower, Enter Keypress does not work
                         // but we can detect the presence of <br> in the cell.
@@ -126,28 +130,28 @@ function smartTable({ root, refresh, columns, onadd, filter, buttons }) {
                         event.target.blur();
                     }
                 });
-                td.addEventListener('keydown', (event) => {
+                input.addEventListener('keydown', (event) => {
                     if (event.key == "Escape") {
-                        td.innerHTML = td.getAttribute("data-value");
+                        input.value = td.getAttribute("data-value");
                         event.target.blur();
                     }
                 });
-                td.addEventListener('keypress', (event) => {
+                input.addEventListener('keypress', (event) => {
                     if (event.key == "Enter" || event.keyCode == 13) {
                         event.preventDefault();
                         event.stopPropagation();
                         event.target.blur();
                     }
                 });
-                td.addEventListener('focusout', (event) => {
-                    td.innerHTML = mispaf.escape(mispaf.unescape(td.innerHTML)); // unescape removes <br>
-                    if (td.innerHTML != td.getAttribute("data-value")) {
-                        td.setAttribute("data-value", td.innerHTML);
+                input.addEventListener('focusout', (event) => {
+                    let val=input.value;
+                    if (val != td.getAttribute("data-value")) {
+                        td.setAttribute("data-value", val);
                         let idx = [...td.parentElement.parentElement.children].indexOf(td.parentElement);
                         if (idx >= 0) {
-                            col.onedit(td, data[idx]);
+                            col.onedit(td, data[idx], val);
                         } else {
-                            col.onedit(td, row);
+                            col.onedit(td, row, val);
                         }
                     }
                 });

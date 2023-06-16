@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 
-const DEBUG = false;
+const DEBUG = true;
 const APP = __dirname + "/../frontend/editor.html";
 const QUERY = __dirname + "/../frontend/query.html";
 const CONSOLE = __dirname + "/../frontend/console.html";
@@ -10,7 +10,7 @@ const sqlite3 = require("../../common-backend/sqlite3adapter");
 const fs = require('fs');
 const fspath = require('path');
 const LIMIT = 1000;
-const VERSION = "1.0.36";
+const VERSION = "1.0.37";
 const os = require('os');
 require('@electron/remote/main').initialize()
 
@@ -810,44 +810,49 @@ ipcMain.on('asynchronous-message', async (event, arg) => {
                                 let op = arg.operations[i];
                                 results.push(op);
                                 if ("update" in op) {
-                                    let sql = `UPDATE ${arg.table} SET `;
-                                    let sep = "";
-                                    let params = [];
-                                    for (let k in op.update) {
-                                        sql += sep + k + "=?"
-                                        sep = ", ";
-                                        params.push(op.update[k]);
-                                    }
-                                    let where = " WHERE ";
-                                    let wparams = [];
-                                    sep = "";
-                                    for (let k in op.pks) {
-                                        where += sep + k + "=?"
-                                        sep = " AND ";
-                                        params.push(op.pks[k]);
-                                        if (k in op.update) {
-                                            wparams.push(op.update[k]);
-                                        } else {
-                                            wparams.push(op.pks[k]);
-                                        }
-                                    }
-                                    try {
-                                        let update = db.prepare(sql + where);
-                                        let select = db.prepare(`SELECT * FROM ${arg.table}${where}`);
-                                        await db.transaction(async () => {
-                                            let info = await update.run.apply(update, params);
-                                            if (info.changes) {
-                                                op.success = true;
-                                                let row = await select.get.apply(select, wparams);
-                                                op.tuple = row;
-                                            } else {
-                                                op.success = false;
-                                                op.error = "This tuple does not exist anymore.";
-                                            }
-                                        });
-                                    } catch (err) {
+                                    if (Object.keys(op.update).length==0) {
                                         op.success = false;
-                                        op.error = err.message;
+                                        op.error = "Nothing to update";
+                                    } else {
+                                        let sql = `UPDATE ${arg.table} SET `;
+                                        let sep = "";
+                                        let params = [];
+                                        for (let k in op.update) {
+                                            sql += sep + k + "=?"
+                                            sep = ", ";
+                                            params.push(op.update[k]);
+                                        }
+                                        let where = " WHERE ";
+                                        let wparams = [];
+                                        sep = "";
+                                        for (let k in op.pks) {
+                                            where += sep + k + "=?"
+                                            sep = " AND ";
+                                            params.push(op.pks[k]);
+                                            if (k in op.update) {
+                                                wparams.push(op.update[k]);
+                                            } else {
+                                                wparams.push(op.pks[k]);
+                                            }
+                                        }
+                                        try {
+                                            let update = db.prepare(sql + where);
+                                            let select = db.prepare(`SELECT * FROM ${arg.table}${where}`);
+                                            await db.transaction(async () => {
+                                                let info = await update.run.apply(update, params);
+                                                if (info.changes) {
+                                                    op.success = true;
+                                                    let row = await select.get.apply(select, wparams);
+                                                    op.tuple = row;
+                                                } else {
+                                                    op.success = false;
+                                                    op.error = "This tuple does not exist anymore.";
+                                                }
+                                            });
+                                        } catch (err) {
+                                            op.success = false;
+                                            op.error = err.message;
+                                        }    
                                     }
                                 } else if ("delete" in op) {
                                     let sql = `DELETE FROM ${arg.table} WHERE `;
@@ -869,23 +874,30 @@ ipcMain.on('asynchronous-message', async (event, arg) => {
                                         op.error = err.message;
                                     }
                                 } else if ("insert" in op) {
-                                    let sql = `INSERT INTO ${arg.table} (${Object.keys(op.insert).join(',')}) VALUES (`;
-                                    let sep = "";
+                                    let sql;
                                     let params = [];
-                                    for (let k in op.insert) {
-                                        sql += sep + "?";
-                                        sep = ",";
-                                        params.push(op.insert[k]);
-                                    }
-                                    sql += ")";
-                                    //
-                                    let where = " WHERE ";
+                                    let where;
                                     let wparams = [];
-                                    sep = "";
-                                    for (let k in op.insert) {
-                                        where += sep + k + "=?"
-                                        sep = " AND ";
-                                        wparams.push(op.insert[k]);
+                                    let sep = "";
+                                    if (Object.keys(op.insert).length==0) {
+                                        sql=`INSERT INTO ${arg.table} DEFAULT VALUES`;
+                                        where="";
+                                    } else {
+                                        sql = `INSERT INTO ${arg.table} (${Object.keys(op.insert).join(',')}) VALUES (`;
+                                        let sep = "";
+                                        for (let k in op.insert) {
+                                            sql += sep + "?";
+                                            sep = ",";
+                                            params.push(op.insert[k]);
+                                        }
+                                        sql += ")";
+                                        where=" WHERE ";
+                                        sep = "";
+                                        for (let k in op.insert) {
+                                            where += sep + k + "=?"
+                                            sep = " AND ";
+                                            wparams.push(op.insert[k]);
+                                        }
                                     }
                                     // get back auto generated pks
                                     let getpks = [];
@@ -897,7 +909,7 @@ ipcMain.on('asynchronous-message', async (event, arg) => {
                                     let sel = `SELECT * FROM ${arg.table}${where}`;
                                     for (let i = 0; i < op.pks.length; i++) {
                                         if (op.pks[i] in op.insert) continue;
-                                        sel += ` AND ${op.pks[i]}=?`;
+                                        sel += ` ${i>0||where!=""?" AND ":" WHERE "} ${op.pks[i]}=?`;
                                     }
                                     try {
                                         let insert = db.prepare(sql);
@@ -908,7 +920,7 @@ ipcMain.on('asynchronous-message', async (event, arg) => {
                                         let select = db.prepare(sel);
                                         await db.transaction(async () => {
                                             let info = await insert.run.apply(insert, params);
-                                            if (info.changes) {
+                                            if (info.changes>0) {                                                
                                                 op.success = true;
                                                 let pkvs = [];
                                                 for (let i = 0; i < pks.length; i++) {
@@ -918,7 +930,7 @@ ipcMain.on('asynchronous-message', async (event, arg) => {
                                                         break;
                                                     }
                                                 }
-                                                await wparams.push.apply(wparams, pkvs);
+                                                wparams.push.apply(wparams, pkvs);
                                                 let row = await select.get.apply(select, wparams);
                                                 op.tuple = row;
                                             } else {

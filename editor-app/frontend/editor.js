@@ -273,8 +273,8 @@ $.SQLEditor = {};
                     render(row) {
                         return row.name;
                     },
-                    onedit(el, row) {
-                        row.name = el.innerText;
+                    onedit(el, row, val) {
+                        row.name = val;
                     }
                 },
                 {
@@ -388,8 +388,8 @@ $.SQLEditor = {};
                 render(row) {
                     return mispaf.escape(row);
                 },
-                onedit(el, row) {
-                    t2.get()[t2.get().indexOf(row)] = el.innerText;
+                onedit(el, row, val) {
+                    t2.get()[t2.get().indexOf(row)] = val;
                 }
             },
             {

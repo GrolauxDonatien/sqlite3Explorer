@@ -52,25 +52,25 @@ function showTuple() {
             td = $('<td>');
             if ("fk" in info) {
                 let select = $('<select singleselect-search="true">');
-                select.on('change', ()=>{
+                select.on('change', () => {
                     tr[0].children[0].setAttribute('class', 'changed');
                 })
                 ipcAjax({
                     adapter: "sqlite3",
                     action: "exec",
                     exec: `SELECT * FROM ${info.fk.table} WHERE ${info.fk.column}=?`,
-                    args:[tuple[i]],
+                    args: [tuple[i]],
                     file: conf.file
                 }, (options) => {
                     function toObj(tuple) {
-                        if (tuple==null) {
-                            return {[info.fk.column]:null,text:"NULL"};
+                        if (tuple == null) {
+                            return { [info.fk.column]: null, text: "NULL" };
                         } else {
-                            return {[info.fk.column]:tuple[fkidx],text:tuple.join('/')};
+                            return { [info.fk.column]: tuple[fkidx], text: tuple.join('/') };
                         }
                     }
                     let fkidx = -1;
-                    let fields=[];
+                    let fields = [];
                     for (let j = 0; j < options.results.fields.length; j++) {
                         if (options.results.fields[j].name === info.fk.column) {
                             fkidx = j;
@@ -82,58 +82,58 @@ function showTuple() {
                         keys: { [info.fk.column]: "text" },
                         pagingSize: 100,
                         async total(search) {
-                            let q={};
-                            q.exec=`SELECT COUNT(*) FROM ${info.fk.table}`
-                            if (search.trim()!='') {
-                                q.exec+=` WHERE ${fields.join(" || '/' || ")} LIKE ?`;
-                                q.args=['%'+search+'%'];
+                            let q = {};
+                            q.exec = `SELECT COUNT(*) FROM ${info.fk.table}`
+                            if (search.trim() != '') {
+                                q.exec += ` WHERE ${fields.join(" || '/' || ")} LIKE ?`;
+                                q.args = ['%' + search + '%'];
                             }
-                            return new Promise((resolve, reject)=>{
-                                q.adapter="sqlite3",
-                                q.action="exec";
-                                q.file=conf.file;
-                                ipcAjax(q,(result)=>{
+                            return new Promise((resolve, reject) => {
+                                q.adapter = "sqlite3",
+                                    q.action = "exec";
+                                q.file = conf.file;
+                                ipcAjax(q, (result) => {
                                     resolve(result.results.rows[0][0]);
                                 });
                             });
                         },
                         async fetch(search, start) {
-                            let q={};
-                            q.exec=`SELECT * FROM ${info.fk.table}`
-                            if (search.trim()!='') {
-                                q.exec+=` WHERE ${fields.join(" || '/' || ")} LIKE ?`;
-                                q.args=['%'+search+'%'];
+                            let q = {};
+                            q.exec = `SELECT * FROM ${info.fk.table}`
+                            if (search.trim() != '') {
+                                q.exec += ` WHERE ${fields.join(" || '/' || ")} LIKE ?`;
+                                q.args = ['%' + search + '%'];
                             }
-                            q.exec+=" LIMIT 100 OFFSET "+start;
-                            return new Promise((resolve, reject)=>{
-                                q.adapter="sqlite3",
-                                q.action="exec";
-                                q.file=conf.file;
-                                ipcAjax(q,(result)=>{
-                                    let opts=[];
-                                    if (start==0 && info.nullable) {
-                                        opts.push({[info.fk.column]:null,text:"NULL"});
+                            q.exec += " LIMIT 100 OFFSET " + start;
+                            return new Promise((resolve, reject) => {
+                                q.adapter = "sqlite3",
+                                    q.action = "exec";
+                                q.file = conf.file;
+                                ipcAjax(q, (result) => {
+                                    let opts = [];
+                                    if (start == 0 && info.nullable) {
+                                        opts.push({ [info.fk.column]: null, text: "NULL" });
                                     }
-                                    for(let i=0; i<result.results.rows.length; i++) {
-                                        opts.push({[info.fk.column]:result.results.rows[i][fkidx],text:result.results.rows[i].join('/')});
+                                    for (let i = 0; i < result.results.rows.length; i++) {
+                                        opts.push({ [info.fk.column]: result.results.rows[i][fkidx], text: result.results.rows[i].join('/') });
                                     }
                                     resolve(opts);
                                 });
                             });
                         },
                         async get(key) {
-                            let q={};
-                            if (key!=null) {
-                                q.exec=`SELECT * FROM ${info.fk.table} WHERE ${info.fk.column}=?`;
-                                q.args=key;
+                            let q = {};
+                            if (key != null) {
+                                q.exec = `SELECT * FROM ${info.fk.table} WHERE ${info.fk.column}=?`;
+                                q.args = key;
                             } else {
-                                q.exec=`SELECT * FROM ${info.fk.table} WHERE ${info.fk.column} IS NULL`;
+                                q.exec = `SELECT * FROM ${info.fk.table} WHERE ${info.fk.column} IS NULL`;
                             }
-                            return new Promise((resolve, reject)=>{
-                                q.adapter="sqlite3",
-                                q.action="exec";
-                                q.file=conf.file;
-                                ipcAjax(q,(result)=>{
+                            return new Promise((resolve, reject) => {
+                                q.adapter = "sqlite3",
+                                    q.action = "exec";
+                                q.file = conf.file;
+                                ipcAjax(q, (result) => {
                                     resolve(result.results.rows[0][0]);
                                 });
                             });
@@ -169,7 +169,7 @@ function showTuple() {
                         input.attr('type', 'number');
                         break;
                 }
-                if (tuple[i]!=null) input.val(tuple[i]);
+                if (tuple[i] != null) input.val(tuple[i]);
                 td.append(input);
             }
             tr.append(td);
@@ -353,8 +353,10 @@ $('#save').on('click', () => {
             let v = el.getAttribute('data-pk');
             if (v) {
                 pk[f] = JSON.parse(v);
+                if (info.type == "integer" && info.auto === true) continue;
+            } else {
+                pk[f] = null;
             }
-            if (info.type == "integer" && info.auto === true) continue;
         }
         let v;
         switch (schema[f].format) {

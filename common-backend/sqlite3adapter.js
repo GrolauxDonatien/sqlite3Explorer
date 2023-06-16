@@ -11,7 +11,7 @@ async function promise(db, op, ...args) {
             if (err != null) {
                 reject(err);
             } else {
-                resolve(result||this);
+                resolve(result || this);
             }
         });
         db[op].apply(db, args);
@@ -49,8 +49,7 @@ async function connect(conf) {
         return new Promise(async (resolve, reject) => {
             try {
                 let tables = {};
-                let stmt = db.all(`SELECT name FROM sqlite_master
-                WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`,
+                db.all(`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`,
                     async (err, rows) => {
                         if (err != null) {
                             reject(err);
@@ -84,9 +83,9 @@ async function connect(conf) {
                                             let f = {
                                                 name: row.name,
                                                 "nullable": row.notnull != 1,
-                                                "auto": (row.pk == 1 && row.type == "INTEGER"),
-                                                "pk": row.pk == 1,
-                                                "unique": row.pk == 1
+                                                "auto": (row.pk > 0 && row.type == "INTEGER"),
+                                                "pk": row.pk > 0,
+                                                "unique": row.pk > 0
                                             };
                                             let t = internalTypeToType(row.type);
                                             for (let k in t) f[k] = t[k];
@@ -191,8 +190,8 @@ async function connect(conf) {
     function prepare(sql) {
         return {
             async run(...params) { return promise(db, "run", sql, ...params) },
-            async get(...params) { return promise(db, "get", sql,...params) },
-            async all(...params) { return promise(db, "all", sql,...params) }
+            async get(...params) { return promise(db, "get", sql, ...params) },
+            async all(...params) { return promise(db, "all", sql, ...params) }
         }
     }
 
@@ -288,14 +287,14 @@ function inject(sql, args) {
     // this is unsafe : resolve a parametrised statement injecting the values directly.
     // A proper solution would be to parse the statement, identify the ? and insert the values safely.
     // However, due to the use case of this application, this simple solution is good enough.
-    let parts=sql.split('?');
-    let ret=[];
-    for(let i=0; i<args.length; i++) {
+    let parts = sql.split('?');
+    let ret = [];
+    for (let i = 0; i < args.length; i++) {
         ret.push(parts[i]);
-        if (args[i]==null) {
+        if (args[i] == null) {
             ret.push('NULL');
-        } else if (typeof args[i]=="string" || (args[i] instanceof String)) {
-            ret.push("'"+args[i].split("'").join("''")+"'");
+        } else if (typeof args[i] == "string" || (args[i] instanceof String)) {
+            ret.push("'" + args[i].split("'").join("''") + "'");
         } else {
             ret.push(args[i]);
         }
@@ -314,25 +313,20 @@ async function execDB(file, sql, args = []) {
                         try {
                             await promise(db, "exec", "PRAGMA foreign_keys = ON;");
                             await promise(db, "run", 'BEGIN TRANSACTION');
-                            let query = false;
                             let orows = [];
                             let qfields = [];
-                            try {
-                                if (args.length==0) {
-                                    await promise(db, "run", "CREATE TEMP VIEW query__tmp AS " + sql, args);
-                                } else {
-                                    await promise(db, "run", "CREATE TEMP VIEW query__tmp AS " + inject(sql, args));
-                                }
-                                query = true;    
-                            } catch (_) { 
-                                console.log(_);
-                            };
-                            if (query) {
-                                qfields = await promise(db, "all", "PRAGMA table_info(query__tmp)");
-                                await promise(db, "run", "DROP VIEW query__tmp");
+                            if (sql.trim().toUpperCase().startsWith("PRAGMA ")) {
                                 orows = await promise(db, "all", sql, args);
                                 await promise(db, "run", "COMMIT");
-                                let fields = buildFields(qfields);
+                                let fields=[];
+                                if (orows.length>0) for(let k in orows[0]) {
+                                    fields.push({
+                                        name: k,
+                                        internal: typeof k,
+                                        internalType: typeof k,
+                                        format: typeof k
+                                    });
+                                }
                                 let rows = toArray(orows, fields);
                                 resolve({
                                     rowCount: rows.length,
@@ -340,23 +334,47 @@ async function execDB(file, sql, args = []) {
                                     fields: fields
                                 });
                             } else {
+                                let query = false;
                                 try {
-                                    await promise(db, "run", sql, args);
-                                } catch (run_error) {
+                                    if (args.length == 0) {
+                                        await promise(db, "run", "CREATE TEMP VIEW query__tmp AS " + sql, args);
+                                    } else {
+                                        await promise(db, "run", "CREATE TEMP VIEW query__tmp AS " + inject(sql, args));
+                                    }
+                                    query = true;
+                                } catch (_) {
+                                    console.log(_);
+                                };    
+                                if (query) {
+                                    qfields = await promise(db, "all", "PRAGMA table_info(query__tmp)");
+                                    await promise(db, "run", "DROP VIEW query__tmp");
+                                    orows = await promise(db, "all", sql, args);
+                                    await promise(db, "run", "COMMIT");
+                                    let fields = buildFields(qfields);
+                                    let rows = toArray(orows, fields);
+                                    resolve({
+                                        rowCount: rows.length,
+                                        rows: rows,
+                                        fields: fields
+                                    });
+                                } else {
                                     try {
-                                        await promise(db, "exec", sql, args);
-                                    } catch (exec_error) {
-                                        if (exec_error.message == 'Argument 1 must be a function') {
-                                            throw run_error;
-                                        } else {
-                                            throw exec_error;
+                                        await promise(db, "run", sql, args);
+                                    } catch (run_error) {
+                                        try {
+                                            await promise(db, "exec", sql, args);
+                                        } catch (exec_error) {
+                                            if (exec_error.message == 'Argument 1 must be a function') {
+                                                throw run_error;
+                                            } else {
+                                                throw exec_error;
+                                            }
                                         }
                                     }
+                                    await promise(db, "run", "COMMIT");
+                                    resolve({ success: true });
                                 }
-                                await promise(db, "run", "COMMIT");
-                                resolve({ success: true });
                             }
-                            resolve();
                         } catch (e) {
                             try {
                                 await promise(db, "run", "ROLLBACK");

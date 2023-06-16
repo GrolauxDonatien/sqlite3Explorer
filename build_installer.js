@@ -55,7 +55,7 @@ if (REPACKAGE) {
     // remove .zip file
     let files=fs.readdirSync(".");
     for(let i=0; i<files.length; i++) {
-        if (files[i].startsWith("SQLite3_Explorer") && files[i].endsWith(".zip")) {
+        if (files[i].startsWith(APP_NAME) && files[i].endsWith(".zip")) {
             fs.rmSync(files[i]);
         }
     }
