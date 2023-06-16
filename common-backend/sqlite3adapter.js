@@ -177,6 +177,12 @@ async function connect(conf) {
                     reject(e);
                 }
                 let fields = buildFields(qfields);
+                for(let i=0; i<fields.length; i++) {
+                    if (fields[i].name.indexOf(':')!=-1) {
+                        reject(new Error("Query contains several columns of the same name: "+fields[i].name.split(':')[0]));
+                        return;
+                    }
+                }
                 let rows = toArray(orows, fields);
                 resolve({
                     rowCount: rows.length,
