@@ -230,7 +230,6 @@ $.SQLEditor = {};
         function bindType(event, row) {
             let tr = $(event.target.parentElement.parentElement);
             let str = tr.find('select').val();
-            if (row.type == str) return; // no type change => nothing to do
             let n = parseInt(tr.find('select :selected').attr('data-args'));
             if (isNaN(n)) n = 0;
             let inputs = tr.find('input[type="number"]');
@@ -247,9 +246,9 @@ $.SQLEditor = {};
             }
             $.SQLEditor.internalTypeToType(str, (s) => {
                 let checks = tr.find('input[type="checkbox"]');
-                s.name = tr.find('td:first').text();
                 s.nullable = !checks[2].checked;
                 s.auto = checks[3].checked;
+                s.name = row.name;
                 s.pk = checks[0].checked;
                 s.unique = checks[1].checked;
                 if ("fk" in row) s.fk = row.fk;
@@ -424,6 +423,7 @@ $.SQLEditor = {};
                         return;
                     }
                     let cols = {};
+                    columns = t1.get();
                     for (let i = 0; i < columns.length; i++) {
                         if (columns[i].name in cols) {
                             warning(`${columns[i].name} is defined several times.`);
@@ -443,9 +443,10 @@ $.SQLEditor = {};
                         if ("left" in tree) check(tree.left);
                         if ("right" in tree) check(tree.right);
                     }
+                    checks = t2.get();
                     for (let i = 0; i < checks.length; i++) {
                         try {
-                            if (checks[i].trim()=="") {
+                            if (checks[i].trim() == "") {
                                 warning("Empty CHECK constraint.");
                                 return;
                             }

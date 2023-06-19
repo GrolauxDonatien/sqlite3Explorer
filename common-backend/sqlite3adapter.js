@@ -69,6 +69,10 @@ async function connect(conf) {
                         }
                         async function step1() {
                             let count = temp.length;
+                            if (count == 0) {
+                                step2();
+                                return;
+                            }
                             for (let k in tables) {
                                 db.all(`PRAGMA table_info('${k}')`,
                                     async (err, rows) => {
@@ -93,8 +97,44 @@ async function connect(conf) {
                                             table[row.name] = f;
                                         }
                                         count--;
-                                        if (count == 0) step2();
+                                        if (count == 0) step1b();
                                     });
+                            }
+                        }
+                        async function step1b() {
+                            let todo=[];
+                            let count=Object.keys(tables).length;
+                            if (count==0) step2();
+                            for (let k in tables) {
+                                db.all(`PRAGMA index_list('${k}')`, (err, indexes) => {
+                                    if (err != null) {
+                                        reject(err);
+                                        return;
+                                    }
+                                    for(let i=0; i<indexes.length; i++) {
+                                        todo.push({table:k,index:indexes[i].name});
+                                    }
+                                    count--;
+                                    if (count==0) step1c(todo);
+                                });
+                            }
+                        }
+                        async function step1c(todo) {
+                            if (todo.length==0) {
+                                step2();
+                                return;
+                            }
+                            let count=todo.length;
+                            for(let i=0; i<todo.length; i++) {
+                                db.get(`PRAGMA index_info('${todo[i].index}')`, (err, row) => {
+                                    if (err != null) {
+                                        reject(err);
+                                        return;
+                                    }
+                                    tables[todo[i].table][row.name].unique=true;
+                                    count--;
+                                    if (count==0) step2();
+                                });
                             }
                         }
                         async function step2() {
@@ -177,9 +217,9 @@ async function connect(conf) {
                     reject(e);
                 }
                 let fields = buildFields(qfields);
-                for(let i=0; i<fields.length; i++) {
-                    if (fields[i].name.indexOf(':')!=-1) {
-                        reject(new Error("Query contains several columns of the same name: "+fields[i].name.split(':')[0]));
+                for (let i = 0; i < fields.length; i++) {
+                    if (fields[i].name.indexOf(':') != -1) {
+                        reject(new Error("Query contains several columns of the same name: " + fields[i].name.split(':')[0]));
                         return;
                     }
                 }
@@ -324,8 +364,8 @@ async function execDB(file, sql, args = []) {
                             if (sql.trim().toUpperCase().startsWith("PRAGMA ")) {
                                 orows = await promise(db, "all", sql, args);
                                 await promise(db, "run", "COMMIT");
-                                let fields=[];
-                                if (orows.length>0) for(let k in orows[0]) {
+                                let fields = [];
+                                if (orows.length > 0) for (let k in orows[0]) {
                                     fields.push({
                                         name: k,
                                         internal: typeof k,
@@ -350,7 +390,7 @@ async function execDB(file, sql, args = []) {
                                     query = true;
                                 } catch (_) {
                                     console.log(_);
-                                };    
+                                };
                                 if (query) {
                                     qfields = await promise(db, "all", "PRAGMA table_info(query__tmp)");
                                     await promise(db, "run", "DROP VIEW query__tmp");
