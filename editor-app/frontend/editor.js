@@ -274,6 +274,11 @@ $.SQLEditor = {};
                     },
                     onedit(el, row, val) {
                         row.name = val;
+                    },
+                    onevent: {
+                        render:(event)=>{
+                            $(event.target).find('input').on('keydown', keydown);
+                        }
                     }
                 },
                 {
@@ -425,12 +430,13 @@ $.SQLEditor = {};
                     let cols = {};
                     columns = t1.get();
                     for (let i = 0; i < columns.length; i++) {
+                        columns[i].name=columns[i].name.trim(); // just in case
                         if (columns[i].name in cols) {
                             warning(`${columns[i].name} is defined several times.`);
                             return;
                         }
-                        if (columns[i].name.trim() == "") {
-                            warning(`A column has no name.`);
+                        if (columns[i].name == "") {
+                            warning(`A column has no name (Arya Stark).`);
                             return;
                         }
                         cols[columns[i].name] = true;
