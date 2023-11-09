@@ -10,7 +10,7 @@ const sqlite3 = require("../../common-backend/sqlite3adapter");
 const fs = require('fs');
 const fspath = require('path');
 const LIMIT = 1000;
-const VERSION = "1.0.38";
+const VERSION = "1.0.39";
 const os = require('os');
 require('@electron/remote/main').initialize()
 
@@ -190,7 +190,7 @@ const template = [
                             buttons: ['Close'],
                             defaultId: 2,
                             title: 'About SQLite3 Explorer',
-                            message: 'Developped by Donatien Grolaux under MIT license.',
+                            message: 'Developped by Donatien Grolaux under MIT license.\nVersion '+VERSION,
                         };
 
                         dialog.showMessageBox(null, options, (response, checkboxChecked) => {
