@@ -11,7 +11,12 @@ const sqlparser = require('../common-frontend/lib/js-sql-parser-master/dist/pars
 function fixQueryColumns(array) {
     let colnames = {};
     function getColname(col) {
-        if (col.alias != null) return col.alias;
+        if (col.alias != null) {
+            if (col.alias.startsWith("'") && col.alias.endsWith("'")) {
+                col.alias=col.alias.substring(1,col.alias.length-1);
+            }
+            return col.alias;
+        }
         let two = col.value.split('.');
         switch (two.length) {
             case 1: return two[0];
@@ -43,7 +48,7 @@ function fixQueryColumns(array) {
     if (allAs) { // could not create explicit AS
         for (let colname in colnames) {
             if (colnames[colname].length > 1) {
-                for (let i = 0; i < colnames[colname].length; j++) {
+                for (let i = 0; i < colnames[colname].length; i++) {
                     let col = array[colnames[colname][i]];
                     col.alias = col.alias + '_' + (i + 1);
                 }
