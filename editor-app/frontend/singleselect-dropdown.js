@@ -124,7 +124,6 @@ singleselectDropdown = (() => {
         }
 
 
-        console.log(el.clientWidth);
         let div = newEl('div', { class: 'singleselect-dropdown', style: { width: config.style?.width ?? el.clientWidth + 'px', padding: config.style?.padding ?? '' } });
         el.style.display = 'none';
         el.parentNode.insertBefore(div, el.nextSibling);
@@ -179,7 +178,11 @@ singleselectDropdown = (() => {
                     value: option[valuekey],
                     text: option[textkey]
                 };
-                let op = newEl('div', { class: o.value == current[valuekey] ? 'checked' : '', optEl: o })
+                let selected=o.value == current[valuekey];
+                let op = newEl('div', { class:  selected ? 'checked' : '', optEl: o });
+                if (selected) {
+                    el.innerHTML = '<option value="' + o.value + '" selected></option>';
+                }
                 op.appendChild(newEl('label', { text: o.text }));
                 op.addEventListener('click', (event) => {
                     let olds = list.querySelectorAll('.checked');
