@@ -4,6 +4,59 @@ const {
     toJSType, types, internalTypeToType, buildFields, toArray
 } = require('./sqliteutils');
 
+const sqlparser = require('../common-frontend/lib/js-sql-parser-master/dist/parser/sqlParser');
+
+//let sql = "SELECT t1.figid,table2.figid as figid FROM table1 t1, table2";
+//let ast = sqlparser.parse(sql);
+function fixQueryColumns(array) {
+    let colnames = {};
+    function getColname(col) {
+        if (col.alias != null) return col.alias;
+        let two = col.value.split('.');
+        switch (two.length) {
+            case 1: return two[0];
+            case 2: return two[1];
+            default: return col.value;
+        }
+    }
+    for (let i = 0; i < array.length; i++) {
+        if (array[i].type == 'Identifier') {
+            let colname = getColname(array[i]);
+            if (colname in colnames) {
+                colnames[colname].push(i);
+            } else colnames[colname] = [i];
+        }
+    }
+    let allAs = true;
+    for (let colname in colnames) {
+        if (colnames[colname].length > 1) {
+            for (let i = 0; i < colnames[colname].length; i++) {
+                let col = array[colnames[colname][i]];
+                if (col.alias == null) {
+                    allAs = false;
+                    col.alias = col.value.split('.').join('_');
+                    col.hasAs = true;
+                }
+            }
+        }
+    }
+    if (allAs) { // could not create explicit AS
+        for (let colname in colnames) {
+            if (colnames[colname].length > 1) {
+                for (let i = 0; i < colnames[colname].length; j++) {
+                    let col = array[colnames[colname][i]];
+                    col.alias = col.alias + '_' + (i + 1);
+                }
+            }
+        }
+    } else { // colnames have changed, try again
+        return fixQueryColumns(array);
+    }
+    return array;
+}
+//ast.value.selectItems.value = fix(ast.value.selectItems.value);
+//sql = sqlparser.stringify(ast);
+//console.log(sql);
 
 async function promise(db, op, ...args) {
     return new Promise((resolve, reject) => {
@@ -102,38 +155,38 @@ async function connect(conf) {
                             }
                         }
                         async function step1b() {
-                            let todo=[];
-                            let count=Object.keys(tables).length;
-                            if (count==0) step2();
+                            let todo = [];
+                            let count = Object.keys(tables).length;
+                            if (count == 0) step2();
                             for (let k in tables) {
                                 db.all(`PRAGMA index_list('${k}')`, (err, indexes) => {
                                     if (err != null) {
                                         reject(err);
                                         return;
                                     }
-                                    for(let i=0; i<indexes.length; i++) {
-                                        todo.push({table:k,index:indexes[i].name});
+                                    for (let i = 0; i < indexes.length; i++) {
+                                        todo.push({ table: k, index: indexes[i].name });
                                     }
                                     count--;
-                                    if (count==0) step1c(todo);
+                                    if (count == 0) step1c(todo);
                                 });
                             }
                         }
                         async function step1c(todo) {
-                            if (todo.length==0) {
+                            if (todo.length == 0) {
                                 step2();
                                 return;
                             }
-                            let count=todo.length;
-                            for(let i=0; i<todo.length; i++) {
+                            let count = todo.length;
+                            for (let i = 0; i < todo.length; i++) {
                                 db.get(`PRAGMA index_info('${todo[i].index}')`, (err, row) => {
                                     if (err != null) {
                                         reject(err);
                                         return;
                                     }
-                                    tables[todo[i].table][row.name].unique=true;
+                                    tables[todo[i].table][row.name].unique = true;
                                     count--;
-                                    if (count==0) step2();
+                                    if (count == 0) step2();
                                 });
                             }
                         }
@@ -201,34 +254,70 @@ async function connect(conf) {
 
         return new Promise((resolve, reject) => {
             db.serialize(async () => {
-                let orows = [];
-                let qfields = [];
-                try {
-                    await promise(db, "run", 'BEGIN TRANSACTION');
-                    orows = await promise(db, "all", sql);
-                    await promise(db, "run", "CREATE TEMP VIEW query__tmp AS " + sql);
-                    qfields = await promise(db, "all", "PRAGMA table_info(query__tmp)");
-                    await promise(db, "run", "DROP VIEW query__tmp");
-                    await promise(db, "run", "COMMIT");
-                } catch (e) {
+                let conflict = undefined;
+                while (true) {
+                    // The sqlite driver has a nasty limitation: as tuples are returned as objects indexed on column names, 
+                    // queries returning several columns with the same name end up collapsed into a single key.
+                    // This code tries to be smart to detect, and resolve the issue.
+                    let orows = [];
+                    let qfields = [];
                     try {
-                        await promise(db, "run", "ROLLBACK");
-                    } catch (_) { }
-                    reject(e);
-                }
-                let fields = buildFields(qfields);
-                for (let i = 0; i < fields.length; i++) {
-                    if (fields[i].name.indexOf(':') != -1) {
-                        reject(new Error("Query contains several columns of the same name: " + fields[i].name.split(':')[0]));
+                        await promise(db, "run", 'BEGIN TRANSACTION');
+                        orows = await promise(db, "all", sql);
+                        // to detect the issue, we create a view out of the query
+                        await promise(db, "run", "CREATE TEMP VIEW query__tmp AS " + sql);
+                        // which allows introspecting its structure
+                        qfields = await promise(db, "all", "PRAGMA table_info(query__tmp)");
+                        await promise(db, "run", "DROP VIEW query__tmp");
+                        await promise(db, "run", "COMMIT");
+                    } catch (e) {
+                        try {
+                            await promise(db, "run", "ROLLBACK");
+                        } catch (_) { }
+                        if (first) {
+                            // this is a proper issue with the query
+                            reject(e);
+                            return;
+                        } else {
+                            // this is a problem with the rewritten SQL query: exits the break loop
+                            break;
+                        }
+                    }
+                    let fields = buildFields(qfields);
+                    let ok = true;
+                    for (let i = 0; i < fields.length; i++) {
+                        // multiple fields with the same name end up with :1, :2, etc added
+                        // this detection mechanism could yield false results though...
+                        if (fields[i].name.indexOf(':') != -1) {
+                            ok = false;
+                            if (conflict === undefined) conflict = fields[i].name.split(':')[0];
+                            break;
+                        }
+                    }
+                    if (ok) {
+                        // no conflicts
+                        let rows = toArray(orows, fields);
+                        resolve({
+                            rowCount: rows.length,
+                            rows: rows,
+                            fields: fields
+                        });
                         return;
+                    } else {
+                        first = false;
+                        oldsql = sql;
+                        // rewrite the SQL query to ensure uniqueness of column names
+                        try {
+                            let ast = sqlparser.parse(sql);
+                            ast.value.selectItems.value = fixQueryColumns(ast.value.selectItems.value);
+                            sql = sqlparser.stringify(ast);
+                        } catch (_) { }
+                        if (oldsql == sql) { // did not successfully change to something working right
+                            break;
+                        }
                     }
                 }
-                let rows = toArray(orows, fields);
-                resolve({
-                    rowCount: rows.length,
-                    rows: rows,
-                    fields: fields
-                });
+                reject(new Error("Query contains several columns of the same name: " + conflict));
             });
         });
     }
