@@ -49,13 +49,13 @@ function display(results) {
             let td = $("<td>");
             switch (formats[j].type) {
                 case "datetime":
-                    td.addClass('date').text(results.rows[i][j]==null?"":new Date(results.rows[i][j]).toLocaleString());
+                    td.addClass('date').text(results.rows[i][j] == null ? "" : new Date(results.rows[i][j]).toLocaleString());
                     break;
                 case "time":
-                    td.addClass('date').text(results.rows[i][j]==null?"":new Date(results.rows[i][j]).toLocaleTimeString());
+                    td.addClass('date').text(results.rows[i][j] == null ? "" : new Date(results.rows[i][j]).toLocaleTimeString());
                     break;
                 case "date":
-                    td.addClass('date').text(results.rows[i][j]==null?"":new Date(results.rows[i][j]).toLocaleDateString());
+                    td.addClass('date').text(results.rows[i][j] == null ? "" : new Date(results.rows[i][j]).toLocaleDateString());
                     break;
                 case "number":
                     td.addClass("number"); // don't break and leak into default
@@ -88,7 +88,7 @@ function setModel(content) {
             let from = queryUI.getTableAliasName(newModel.from[i]);
             if (from.table in schema) {
                 for (let k in schema[from.table]) {
-                    if (k .endsWith("___")) continue;
+                    if (k.endsWith("___")) continue;
                     if (k in dis) {
                         bad[k] = true;
                     } else {
@@ -125,7 +125,7 @@ $('#tab-free textarea').on('keyup', function () {
             $('#tab-schema .error').css('display', 'none');
             $('#tab-qvi .error').css('display', 'none');
             if (syncModelToText) {
-                if (outTab=="tab-qvi") {
+                if (outTab == "tab-qvi") {
                     if (!qvi.display($('#tab-free textarea').val())) {
                         $('#tab-schema .error').css('display', 'flex');
                         $('#tab-qvi .error').css('display', 'flex');
@@ -134,7 +134,7 @@ $('#tab-free textarea').on('keyup', function () {
                     if (!setModel($('#tab-free textarea').val())) {
                         $('#tab-schema .error').css('display', 'flex');
                         $('#tab-qvi .error').css('display', 'flex');
-                    }    
+                    }
                 }
             }
         }, SYNCDELAY); // small delay before trying to sync
@@ -223,6 +223,7 @@ function error(msg) {
 
 
 function execute() {
+    let done = false;
     $('.toast').remove();
     if (overlay == null) {
         // immediately place a completely transparent overlay that prevents further interaction with the UI.
@@ -230,7 +231,7 @@ function execute() {
         $('body').append(overlay);
         // after a while, makes this overlay visible
         setTimeout(function () {
-            if (overlay !== null) {
+            if (overlay !== null && !done) {
                 overlay.css('background-color', 'rgba(0,0,0,0.2)');
                 overlay.append('<div class="loader">');
             }
@@ -250,6 +251,11 @@ function execute() {
         stat: conf.stat,
         file: conf.file
     }, (response) => {
+        done = true;
+        if (overlay != null) {
+            overlay.remove();
+            overlay = null;
+        }
         if ("schema" in response) {
             // the schema was updated; update the UI correspondingly
             $('#tab-schema').empty();
@@ -273,7 +279,7 @@ function execute() {
                     if (outTab == "tab-qvi") {
                         qvi.display(queryUI.stringify(m, "\n"));
                         qvi.resize();
-                    }        
+                    }
                 }
             });
             conf.stat = response.stat;
@@ -282,16 +288,13 @@ function execute() {
             }
         }
         if ("error" in response) {
-            if (overlay != null) {
-                overlay.remove();
-                overlay = null;
-            }
             error(response.error + "<br><br>in<br><br>" + response.query);
         } else {
             display(response.results);
             $('#query').text(response.query);
         }
     }, (err) => {
+        done = true;
         if (overlay != null) {
             overlay.remove();
             overlay = null;
@@ -344,7 +347,7 @@ $("#bottom").on("tabsactivate", function (event, ui) {
 
 $('#top').on("tabsactivate", function (event, ui) {
     outTab = ui.newTab.children().eq(0).attr('href').substring(1);
-    if (outTab=="tab-qvi") {
+    if (outTab == "tab-qvi") {
         if (syncModelToText) {
             qvi.display($('#tab-free textarea').val());
             qvi.resize();
@@ -379,23 +382,23 @@ let qvi = (function initQVI(root) {
 
     function resizeCanvas() {
         let bb = physCanvas.bbox();
-        let w=Math.max(bb.width + 100, physCanvas.canvas.parentElement.clientWidth );
-        let h=Math.max(bb.height + 100, physCanvas.canvas.parentElement.clientHeight );
+        let w = Math.max(bb.width + 100, physCanvas.canvas.parentElement.clientWidth);
+        let h = Math.max(bb.height + 100, physCanvas.canvas.parentElement.clientHeight);
         physCanvas.canvas.setAttribute("width", w);
         physCanvas.canvas.setAttribute("height", h);
-        let ctx=physCanvas.canvas.getContext("2d");
+        let ctx = physCanvas.canvas.getContext("2d");
         ctx.width = w;
         ctx.height = h;
         physCanvas.repaint();
     }
 
     $(window).on('resize', resizeCanvas);
-    let oldsql="";
+    let oldsql = "";
 
     return {
         display(sql) {
-            if (sql.trim()==oldsql) return $('#tab-qvi .error').css('display')=='none';
-            oldsql=sql.trim();
+            if (sql.trim() == oldsql) return $('#tab-qvi .error').css('display') == 'none';
+            oldsql = sql.trim();
             let parsed;
             try {
                 parsed = window.sqlParser.parse(sql);
@@ -407,8 +410,8 @@ let qvi = (function initQVI(root) {
             let queryModelAll = queryASTToQueryModel(parsed);
             let queryModel = queryModelAll.results;
             queryModel = notExistsToForAll(queryModel);
-            let physModel=queryModelToPhysModel(queryModel, physCanvas.config);
-            physCanvas.model.splice(0,physCanvas.model.length);
+            let physModel = queryModelToPhysModel(queryModel, physCanvas.config);
+            physCanvas.model.splice(0, physCanvas.model.length);
             physCanvas.model.push.apply(physCanvas.model, physModel);
 
             physCanvas.addEventListener("afterPaint", physCanvas.bringIntoView);
@@ -421,8 +424,8 @@ let qvi = (function initQVI(root) {
                 physCanvas.addEventListener("stopPaint", f);
             }, 500);
             return true;
-        }, 
-        resize:resizeCanvas
+        },
+        resize: resizeCanvas
     }
 })();
 

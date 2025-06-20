@@ -260,6 +260,7 @@ async function connect(conf) {
         return new Promise((resolve, reject) => {
             db.serialize(async () => {
                 let conflict = undefined;
+                let first=true;
                 while (true) {
                     // The sqlite driver has a nasty limitation: as tuples are returned as objects indexed on column names, 
                     // queries returning several columns with the same name end up collapsed into a single key.
